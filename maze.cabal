@@ -112,6 +112,7 @@ test-suite maze-test
     -- Modules included in this executable, other than Main.
     other-modules:
         GridSpec
+        CellSpec
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

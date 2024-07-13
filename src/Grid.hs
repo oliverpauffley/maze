@@ -1,5 +1,5 @@
 -- | Generates a grid to traverse for maze creation
--- TODO tests
+-- TODO change to map not list
 module Grid where
 
 import           Control.Monad          (guard)
@@ -46,6 +46,9 @@ getNeighbours g (Location (a, b)) =
         left = getCell g (Location(a, b-1))
   in
         catMaybes [right,down,left,up]
+
+insertElem :: Grid a -> a -> Location -> Grid a
+insertElem grid elem location =
 
 -- Convert Grid to Box for pretty printing
 gridToBox :: Show a => Grid a -> B.Box

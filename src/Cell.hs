@@ -2,7 +2,7 @@
 
 module Cell where
 import           Data.Maybe (catMaybes)
-import           Grid       (Location)
+import           Grid       (Grid, Location, getCell, getNeighbours)
 
 data BoundaryType = WorldBoundary | Wall | AdjacentCell Location
   deriving (Eq, Show)
@@ -27,3 +27,16 @@ linkedCells (CellBoundaries u d l r _) = catMaybes [ul, dl, ll, rl]
 
 isLinked :: CellBoundaries -> Location -> Bool
 isLinked c l = elem l $ linkedCells c
+
+-- linkCells :: Grid CellBoundaries -> Location -> Location -> Grid CellBoundaries
+-- linkCells grid a b= do
+--   cellA <- getCell a
+--   cellB <- getCell b
+--   -- check that they are actually neighbours
+--   if elem cellB $ getNeighbours a then
+--       let
+--         cellA = linkCell a b
+
+
+linkCell :: CellBoundaries -> CellBoundaries -> CellBoundaries
+linkCell = undefined
