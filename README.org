@@ -1,0 +1,8 @@
+#+title: Haskell Maze Generator
+
+Generate mazes using different algorithms in Haskell.
+
+* Generate Maze
+#+begin_src shell
+just run
+#+end_src
