@@ -1,65 +1,90 @@
+{-# LANGUAGE InstanceSigs #-}
 -- | Generates a grid to traverse for maze creation
--- TODO change to map not list
 module Grid where
 
-import           Control.Monad          (guard)
-import qualified Data.List.NonEmpty     as NE
-import           Data.Maybe             (catMaybes, isNothing)
+import           Control.Applicative    (Applicative (liftA2), liftA)
+import           Control.Monad          (foldM)
+import           Data.Foldable          (foldl')
+import qualified Data.Map.Strict        as Map
+import           Data.Maybe             (catMaybes, fromMaybe, isNothing)
 import qualified Text.PrettyPrint.Boxes as B
 
-newtype Location = Location (Int, Int)
+
+newtype Coord = Coord (Int, Int)
   deriving (Eq, Show)
 
+instance (Ord Coord) where
+  compare :: Coord -> Coord -> Ordering
+  compare (Coord (a1, a2)) (Coord (b1, b2))
+    | a1 > b1 = GT
+    | a1 == b1 && a2 > b2 = GT
+    | a1 == b1 && a2 == b2 = EQ
+    | otherwise = LT
+
 -- |a 2d grid of values used to construct mazes. Expects a nested array of non-empty lists.
-newtype Grid a = Grid { toNonEmptyLists :: NE.NonEmpty (NE.NonEmpty a) }
+newtype Grid a = Grid (Map.Map Coord a)
     deriving (Eq, Show)
 
+
 -- Smart constructor for Grid
-mkGrid :: NE.NonEmpty (NE.NonEmpty a) -> Maybe (Grid a)
+mkGrid :: [[a]] -> Maybe (Grid a)
 mkGrid rows = do
-    let n = NE.length (NE.head rows)
-    guard (all (\row -> NE.length row == n) rows) -- Ensure all rows have the same length
-    return (Grid rows)
+    if all (\row -> length row == n) rows -- Ensure all rows have the same length
+      then Just $ Grid (nestedListToMap rows)
+    else Nothing
+    where n = length (head rows)
+
+nestedListToMap :: [[a]] -> Map.Map Coord a
+nestedListToMap rows = Map.fromList [ (Coord (i, j), val)
+                                    | (i, row) <- zip [0..] rows
+                                    , (j, val) <- zip [0..] row ]
 
 getDims :: Grid a -> (Int, Int)
-getDims (Grid rows) = do
-  let x = NE.length (NE.head rows)
-  let y = NE.length rows
-  (x, y)
+getDims (Grid rows) =
+  let Coord (x, y) = fst (fromMaybe (Coord (1,1), undefined) (Map.lookupMax rows))
+  in
+    (x +1, y +1)
 
-getCell :: Grid a -> Location -> Maybe a
-getCell g@(Grid rows) (Location(a, b))
-  | a >= fst (getDims g) = Nothing
-  | b >= snd (getDims g) = Nothing
-  | a < 0  = Nothing
-  | b < 0 = Nothing
-  | otherwise = Just $ (rows NE.!! a) NE.!! b
+getCell :: Grid a -> Coord -> Maybe a
+getCell (Grid rows) k =
+  Map.lookup k rows
 
-getNeighbours :: Grid a -> Location -> [a]
-getNeighbours g (Location (a, b)) =
-  if isNothing $ getCell g (Location(a, b)) then []
+
+-- | get the neigbouring cells in a clockwise order from east first.
+getNeighbours :: Grid a -> Coord -> [a]
+getNeighbours g (Coord (a, b)) =
+  if isNothing $ getCell g (Coord (a, b)) then []
   else
   let
-        up = getCell g (Location(a+1, b))
-        down = getCell g (Location(a-1, b))
-        right = getCell g (Location(a, b+1))
-        left = getCell g (Location(a, b-1))
+        up = getCell g (Coord (a+1, b))
+        down = getCell g (Coord (a-1, b))
+        right = getCell g (Coord (a, b+1))
+        left = getCell g (Coord (a, b-1))
   in
         catMaybes [right,down,left,up]
 
-insertElem :: Grid a -> a -> Location -> Grid a
-insertElem grid elem location =
+insertElem :: Grid a -> Coord -> a -> Grid a
+insertElem (Grid rows) k v =
+  Grid $ Map.insert k v rows
 
--- Convert Grid to Box for pretty printing
-gridToBox :: Show a => Grid a -> B.Box
-gridToBox (Grid rows) = B.vsep 1 B.left (fmap rowToBox rows)
-  where
-    rowToBox :: Show a => NE.NonEmpty a -> B.Box
-    rowToBox = B.hsep 2 B.top . fmap (B.text . show)
+-- TODO fix this
+-- -- Convert Grid to Box for pretty printing
+-- gridToBox :: Show a => Grid a -> B.Box
+-- gridToBox (Grid rows) = B.vsep 1 B.left (fmap rowToBox rows)
+--   where
+--     rowToBox :: Show a => NE.NonEmpty a -> B.Box
+--     rowToBox = B.hsep 2 B.top . fmap (B.text . show)
 
--- Pretty print Grid
-prettyPrintGrid :: Show a => Grid a -> String
-prettyPrintGrid = B.render . gridToBox
+-- -- Pretty print Grid
+-- prettyPrintGrid :: Show a => Grid a -> String
+-- prettyPrintGrid = B.render . gridToBox
 
 instance Functor Grid where
-  fmap f (Grid rows) = Grid $ (fmap . fmap) f rows
+  fmap f (Grid rows) = Grid (fmap f rows)
+
+instance Foldable Grid where
+  foldMap f (Grid rows) = foldMap f rows
+
+instance Traversable Grid where
+  traverse :: Applicative f => (a -> f b) -> Grid a -> f (Grid b)
+  traverse f (Grid rows) = Grid <$> traverse f rows

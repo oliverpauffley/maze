@@ -59,7 +59,10 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Grid
+    exposed-modules:  Grid,
+                      Cell,
+                      BinaryTree
+
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -70,7 +73,11 @@ library
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1,
                       boxes,
-                      hspec
+                      hspec,
+                      containers,
+                      random,
+                      MonadRandom
+
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -94,7 +101,8 @@ executable maze
     -- Other library packages from which modules are imported.
     build-depends:
         base ^>=4.17.2.1,
-        maze
+        maze,
+        containers
 
     -- Directories containing source files.
     hs-source-dirs:   app
@@ -133,4 +141,5 @@ test-suite maze-test
     build-depends:
         base ^>=4.17.2.1,
         maze,
-        hspec
+        hspec,
+        containers
