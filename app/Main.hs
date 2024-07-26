@@ -5,5 +5,5 @@ import           Cell       (initBlankSquareMaze, renderMaze)
 
 main :: IO ()
 main = do
-  maze <- binaryMaze $ initBlankSquareMaze 9
+  maze <- binaryMaze $ initBlankSquareMaze 12
   putStrLn $ renderMaze maze
