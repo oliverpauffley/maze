@@ -3,7 +3,8 @@ module GridSpec (spec) where
 
 import qualified Data.Map.Strict as Map
 import           Grid            (getCell, getDims, getNeighbours)
-import           Grid            as G (Coord, Grid (Grid), insertElem, mkGrid)
+import           Grid            as G (Coord (Coord), Grid (Grid), insertElem,
+                                       mkGrid)
 import           Test.Hspec
 
 spec :: Spec
@@ -35,8 +36,8 @@ spec = do
         getNeighbours exampleGrid2x2 (Coord (1,0)) `shouldBe` [4,1]
 
       it "insertElem updates an element with a new value" $ do
-        getCell (insertElem exampleGrid2x2 (Coord (0,0)) 5) (0,0) `shouldBe` Just 5
-        getCell (insertElem exampleGrid2x2 (Coord (1,0)) 5) (1,0) `shouldBe` Just 5
+        getCell (insertElem exampleGrid2x2 (Coord (0,0)) 5) (Coord (0,0)) `shouldBe` Just 5
+        getCell (insertElem exampleGrid2x2 (Coord (1,0)) 5) (Coord (1,0)) `shouldBe` Just 5
 
 exampleNested :: [[Int]]
 exampleNested = [[1, 2],[3,4]]
