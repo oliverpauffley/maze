@@ -10,12 +10,9 @@ import           Grid                 (Coord (Coord), Grid (Grid))
 
 binaryMaze :: MonadRandom m => Grid CellBoundaries -> m (Grid CellBoundaries)
 binaryMaze (Grid grid) = do
-    -- Process updates for each cell in the map
     updatedPairs <- mapM updateCell (Map.assocs grid)
-    -- Return new grid as a Grid type
     return $ Grid (Map.fromList updatedPairs)
   where
-    -- Update cell using binaryCell and match back with its coordinate
     updateCell :: MonadRandom m => (Coord, CellBoundaries) -> m (Coord, CellBoundaries)
     updateCell (coord, cell) = do
         newCell <- binaryCell cell
