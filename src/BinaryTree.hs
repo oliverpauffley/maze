@@ -1,4 +1,6 @@
--- | Generates a maze using the binary tree algorithm
+-- | Generates a maze using the binary tree algorithm.
+-- Roughly this means for each cell we either carve out the bottom or right wall.
+-- if we continue over the entire grid we get a maze.
 module BinaryTree where
 
 import           Cell                 (BoundaryType (AdjacentCell, Wall),

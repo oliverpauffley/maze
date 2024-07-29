@@ -61,7 +61,8 @@ library
     -- Modules exported by the library.
     exposed-modules:  Grid,
                       Cell,
-                      BinaryTree
+                      BinaryTree,
+                      Sidewinder
 
 
     -- Modules included in this library but not exported.

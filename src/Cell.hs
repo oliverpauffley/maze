@@ -3,12 +3,18 @@
 -- | Holds information for maze spaces
 module Cell where
 
+import           Data.Foldable   (foldl')
 import qualified Data.Map.Strict as Map
 import           Data.Maybe      (catMaybes, fromMaybe)
-import           Grid            (Coord (Coord), Grid (Grid), getDims)
+import           Grid            (Coord (Coord), Grid (Grid), getCell, getDims,
+                                  insertElem)
+import           Prelude         hiding (Left, Right)
 
-data BoundaryType = WorldBoundary | Wall | AdjacentCell Coord
-  deriving (Eq, Show)
+data BoundaryType =  WorldBoundary | Wall | AdjacentCell Coord
+  deriving (Eq, Show, Ord)
+
+data Direction = Up | Down | Left | Right
+  deriving (Eq, Show, Ord)
 
 data CellBoundaries = CellBoundaries
   { upBoundary    :: BoundaryType,
@@ -61,6 +67,53 @@ linkedCells (CellBoundaries u d l r _) = catMaybes [ul, dl, ll, rl]
 
 isLinked :: CellBoundaries -> Coord -> Bool
 isLinked c l = elem l $ linkedCells c
+
+linkCells :: Maze -> (Coord, Coord) -> Maze
+linkCells maze (a, b) = do
+  let
+    mazeA = linkCell maze a b
+    mazeB = linkCell mazeA b a
+  mazeB
+
+linkCell :: Maze -> Coord -> Coord -> Maze
+linkCell maze a b = do
+  case getCell maze a of
+    Just cellA -> do
+      let
+        newCellA = addCellLink cellA b
+      insertElem maze a newCellA
+    Nothing -> maze
+
+
+addCellLink :: CellBoundaries -> Coord -> CellBoundaries
+addCellLink cell coord =
+  case coordsToDirection (location cell) coord of
+    Left  -> cell {leftBoundary = AdjacentCell coord}
+    Right -> cell {rightBoundary = AdjacentCell coord}
+    Up    -> cell {upBoundary = AdjacentCell coord}
+    Down  -> cell {downBoundary = AdjacentCell coord}
+
+coordsToDirection :: Coord -> Coord -> Direction
+coordsToDirection (Coord(y1, x1)) (Coord(y2, x2))
+  | y1 == y2 && x1 > x2 = Left
+  | y1 == y2 && x1 < x2 = Right
+  | x1 == x2 && y1 > y2 = Up
+  | otherwise = Down
+
+
+fromListMerge :: (a -> a -> a) -> [(Coord, a)] -> Grid a
+fromListMerge func xs = Grid $ foldl' ins Map.empty xs
+  where
+    ins t (k,x) = Map.insertWith func k x t
+
+mergeCells :: CellBoundaries -> CellBoundaries -> CellBoundaries
+mergeCells (CellBoundaries ua da la ra (Coord (ya, xa))) (CellBoundaries ub db lb rb _) =
+  CellBoundaries
+   (max ua ub)
+   (max da db)
+   (max la lb)
+   (max ra rb)
+   (Coord (ya,xa))
 
 boundaryToChar :: BoundaryType -> String
 boundaryToChar Wall             = "---+"

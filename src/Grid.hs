@@ -2,16 +2,17 @@
 -- | Generates a grid to traverse for maze creation
 module Grid where
 
-import           Control.Applicative    (Applicative (liftA2), liftA)
-import           Control.Monad          (foldM)
-import           Data.Foldable          (foldl')
-import qualified Data.Map.Strict        as Map
-import           Data.Maybe             (catMaybes, fromMaybe, isNothing)
-import qualified Text.PrettyPrint.Boxes as B
+import qualified Data.Map.Strict as Map
+import           Data.Maybe      (catMaybes, fromMaybe, isNothing)
+--import qualified Text.PrettyPrint.Boxes as B
 
 
 newtype Coord = Coord (Int, Int)
-  deriving (Eq, Show)
+  deriving (Eq)
+
+
+instance Show Coord where
+  show (Coord(y, x)) =  show y ++ "," ++ show x
 
 instance (Ord Coord) where
   compare :: Coord -> Coord -> Ordering
@@ -66,6 +67,7 @@ getNeighbours g (Coord (a, b)) =
 insertElem :: Grid a -> Coord -> a -> Grid a
 insertElem (Grid rows) k v =
   Grid $ Map.insert k v rows
+
 
 -- TODO fix this
 -- -- Convert Grid to Box for pretty printing
