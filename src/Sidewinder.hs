@@ -5,12 +5,13 @@ module Sidewinder where
 
 import           Cell                 (BoundaryType (Wall),
                                        CellBoundaries (CellBoundaries, location),
-                                       Direction (Down, Right), Maze, linkCells,
+                                       Direction (Down, Right), Maze,
+                                       getLinkedRowCells, linkCells,
                                        linkedCells)
 import           Control.Monad.Random (MonadRandom, uniform)
 import           Data.Foldable        (foldl')
 import qualified Data.Map.Strict      as Map
-import           Data.Maybe           (catMaybes)
+import           Data.Maybe           (catMaybes, fromMaybe)
 import           Grid                 (Coord (Coord), Grid (Grid), getCell)
 import           Prelude              hiding (Right)
 
@@ -31,19 +32,9 @@ sidewinderCell maze c@(CellBoundaries _ down _ right (Coord (y, x))) =
       case ran of
         Down -> do
           choice <- uniform $ getLinkedRowCells c ++ [location c]
-          let Just cell = getCell maze choice
+          let cellM = getCell maze choice
+              cell = fromMaybe undefined cellM
               Coord (newY, newX) = location cell
           return $ Just (Coord (newY, newX), Coord (newY + 1, newX))
         Right -> return $ Just (Coord (y, x), Coord (y, x + 1))
         _ -> undefined
-
--- | from the given cell find all horizontally linked cells
-getLinkedRowCells :: CellBoundaries -> [Coord]
-getLinkedRowCells cell = [x | x <- linkedCells cell, isOnSameRow x cell]
-
-isOnSameRow :: Coord -> CellBoundaries -> Bool
-isOnSameRow (Coord (y, _)) c
-  | y == y2 = True
-  | otherwise = False
-  where
-    Coord (y2, _) = location c

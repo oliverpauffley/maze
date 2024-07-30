@@ -68,6 +68,15 @@ linkedCells (CellBoundaries u d l r _) = catMaybes [ul, dl, ll, rl]
 isLinked :: CellBoundaries -> Coord -> Bool
 isLinked c l = elem l $ linkedCells c
 
+-- | from the given cell find all horizontally linked cells
+getLinkedRowCells :: CellBoundaries -> [Coord]
+getLinkedRowCells cell = [x | x <- linkedCells cell, isOnSameRow x (location cell)]
+
+isOnSameRow :: Coord -> Coord -> Bool
+isOnSameRow (Coord (y, _)) (Coord (y2, _))
+  | y == y2 = True
+  | otherwise = False
+
 linkCells :: Maze -> (Coord, Coord) -> Maze
 linkCells maze (a, b) = do
   let
