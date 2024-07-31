@@ -3,7 +3,6 @@
 -- | Holds information for maze spaces
 module Cell where
 
-import           Data.Foldable   (foldl')
 import qualified Data.Map.Strict as Map
 import           Data.Maybe      (catMaybes, fromMaybe)
 import           Grid            (Coord (Coord), Grid (Grid), getCell, getDims,
@@ -78,11 +77,7 @@ isOnSameRow (Coord (y, _)) (Coord (y2, _))
   | otherwise = False
 
 linkCells :: Maze -> (Coord, Coord) -> Maze
-linkCells maze (a, b) = do
-  let
-    mazeA = linkCell maze a b
-    mazeB = linkCell mazeA b a
-  mazeB
+linkCells maze (a, b) = linkCell (linkCell maze a b) b a
 
 linkCell :: Maze -> Coord -> Coord -> Maze
 linkCell maze a b = do
@@ -109,20 +104,6 @@ coordsToDirection (Coord(y1, x1)) (Coord(y2, x2))
   | x1 == x2 && y1 > y2 = Up
   | otherwise = Down
 
-
-fromListMerge :: (a -> a -> a) -> [(Coord, a)] -> Grid a
-fromListMerge func xs = Grid $ foldl' ins Map.empty xs
-  where
-    ins t (k,x) = Map.insertWith func k x t
-
-mergeCells :: CellBoundaries -> CellBoundaries -> CellBoundaries
-mergeCells (CellBoundaries ua da la ra (Coord (ya, xa))) (CellBoundaries ub db lb rb _) =
-  CellBoundaries
-   (max ua ub)
-   (max da db)
-   (max la lb)
-   (max ra rb)
-   (Coord (ya,xa))
 
 boundaryToChar :: BoundaryType -> String
 boundaryToChar Wall             = "---+"

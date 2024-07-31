@@ -3,10 +3,12 @@ import           Test.Hspec
 
 import           Cell       (BoundaryType (AdjacentCell, Wall, WorldBoundary),
                              CellBoundaries (CellBoundaries),
-                             Direction (Down, Left, Right, Up), boundaryToChar,
-                             cellToASCII, coordsToDirection, getLinkedRowCells,
-                             isOnSameRow, linkedCells, verticalBoundaryToChar)
-import           Grid       (Coord (Coord))
+                             Direction (Down, Left, Right, Up), Maze,
+                             boundaryToChar, cellToASCII, coordsToDirection,
+                             getLinkedRowCells, initBlankSquareMaze,
+                             isOnSameRow, linkCells, linkedCells,
+                             verticalBoundaryToChar)
+import           Grid       (Coord (Coord), getCell)
 import           Prelude    hiding (Left, Right)
 
 spec :: Spec
@@ -38,8 +40,12 @@ spec = do
         isOnSameRow (Coord (1,0)) (Coord (0, 5)) `shouldBe` False
 
       it "finds linked cells" $ do
-        linkedCells exampleCell `shouldBe` [Coord (0,1), Coord (1,2), Coord(2,1)]
-        getLinkedRowCells exampleCell `shouldBe` [Coord(1,2)]
+        linkedCells exampleCell `shouldBe` [Coord (0,1), Coord (1,2), Coord (2,1)]
+        getLinkedRowCells exampleCell `shouldBe` [Coord (1,2)]
+
+      it "can link two cells together" $ do
+       getCell linkedCellsMaze (Coord (0,0)) `shouldBe` Just linkedTopLeftCell
+       getCell linkedCellsMaze (Coord (0,1)) `shouldBe` Just linkedTopRightCell
 
 
 exampleCell :: CellBoundaries
@@ -49,3 +55,13 @@ exampleCell = CellBoundaries
   (AdjacentCell (Coord (2,1)))
   WorldBoundary
   (Coord (1,1))
+
+linkedCellsMaze :: Maze
+linkedCellsMaze = linkCells (initBlankSquareMaze 2) (Coord (0,0), Coord (0,1))
+
+
+linkedTopLeftCell :: CellBoundaries
+linkedTopLeftCell = CellBoundaries WorldBoundary Wall WorldBoundary (AdjacentCell (Coord (0,1))) (Coord (0,0))
+
+linkedTopRightCell :: CellBoundaries
+linkedTopRightCell = CellBoundaries WorldBoundary Wall (AdjacentCell (Coord (0,0))) WorldBoundary (Coord (0,1))

@@ -7,34 +7,45 @@ import           Cell                 (BoundaryType (Wall),
                                        CellBoundaries (CellBoundaries, location),
                                        Direction (Down, Right), Maze,
                                        getLinkedRowCells, linkCells,
-                                       linkedCells)
+                                       linkedCells, renderMaze)
 import           Control.Monad.Random (MonadRandom, uniform)
-import           Data.Foldable        (foldl')
+import           Data.Foldable        (foldlM)
 import qualified Data.Map.Strict      as Map
-import           Data.Maybe           (catMaybes, fromMaybe)
+import           Data.Maybe           (fromMaybe)
+import           Debug.Trace
 import           Grid                 (Coord (Coord), Grid (Grid), getCell)
 import           Prelude              hiding (Right)
 
-sidewinderMaze :: (MonadRandom m) => Maze -> m Maze
-sidewinderMaze maze@(Grid grid) = do
-  updates <- mapM (sidewinderCell maze . snd) (Map.toAscList grid)
-  return $ foldl' linkCells maze $ catMaybes updates
 
--- returns two cells to link
-sidewinderCell :: (MonadRandom m) => Maze -> CellBoundaries -> m (Maybe (Coord, Coord))
+sidewinderMaze :: (MonadRandom m) => Maze -> m Maze
+sidewinderMaze maze@(Grid grid) =
+  foldlM sidewinderCell maze cells
+  where
+    cells :: [CellBoundaries]
+    cells = snd <$> Map.toAscList grid
+
+sidewinderCell :: (MonadRandom m) => Maze -> CellBoundaries -> m Maze
 sidewinderCell maze c@(CellBoundaries _ down _ right (Coord (y, x))) =
   pickDirection choices
   where
+
     choices = [dir | (cond, dir) <- [(down == Wall, Down), (right == Wall, Right)], cond]
-    pickDirection [] = return Nothing
+
+    pickDirection [] = return maze
     pickDirection directions = do
       ran <- uniform directions
       case ran of
-        Down -> do
-          choice <- uniform $ getLinkedRowCells c ++ [location c]
-          let cellM = getCell maze choice
+        Down  -> handleDown c
+        Right -> return $ linkCells maze (Coord (y, x), Coord (y, x + 1))
+        _     -> undefined
+
+    handleDown currentCell = do
+          let
+            choice = getLinkedRowCells currentCell ++ [location currentCell]
+            --(Coord(currentY, currentX))= location currentCell
+           -- Just leftCell = getCell maze (Coord(currentY, currentX -1))
+          newCell <- (trace $ (show . linkedCells ) currentCell ) (trace $ show $ location currentCell) (trace $ renderMaze maze) uniform choice
+          let cellM = getCell maze newCell
               cell = fromMaybe undefined cellM
               Coord (newY, newX) = location cell
-          return $ Just (Coord (newY, newX), Coord (newY + 1, newX))
-        Right -> return $ Just (Coord (y, x), Coord (y, x + 1))
-        _ -> undefined
+          return $ linkCells maze (Coord (newY, newX), Coord (newY + 1, newX))
