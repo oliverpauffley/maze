@@ -9,8 +9,9 @@ import           Grid            (Coord (Coord), Grid (Grid), getCell, getDims,
                                   insertElem)
 import           Prelude         hiding (Left, Right)
 
-data BoundaryType =  WorldBoundary | Wall | AdjacentCell Coord
-  deriving (Eq, Show, Ord)
+-- TODO this should be linked to cells not coordinates
+data BoundaryType =  WorldBoundary | Wall | AdjacentCell CellBoundaries
+  deriving (Eq, Show)
 
 data Direction = Up | Down | Left | Right
   deriving (Eq, Show, Ord)
@@ -57,19 +58,25 @@ initBlankSquareMaze size =
 linkedCells :: CellBoundaries -> [Coord]
 linkedCells (CellBoundaries u d l r _) = catMaybes [ul, dl, ll, rl]
   where
-    boundaryToLocation (AdjacentCell loc) = Just loc
-    boundaryToLocation _                  = Nothing
     ul = boundaryToLocation u
     dl = boundaryToLocation d
     ll = boundaryToLocation l
     rl = boundaryToLocation r
 
+boundaryToLocation :: BoundaryType -> Maybe Coord
+boundaryToLocation (AdjacentCell loc) = Just loc
+boundaryToLocation _                  = Nothing
+
 isLinked :: CellBoundaries -> Coord -> Bool
 isLinked c l = elem l $ linkedCells c
 
--- | from the given cell find all horizontally linked cells
-getLinkedRowCells :: CellBoundaries -> [Coord]
-getLinkedRowCells cell = [x | x <- linkedCells cell, isOnSameRow x (location cell)]
+-- -- | from the given cell find all horizontally linked cells
+-- getLinkedRowCells :: Grid CellBoundaries -> CellBoundaries -> [Coord]
+-- getLinkedRowCells maze (CellBoundaries _ _ l r _)  =
+--   where
+--         getAllLeftCells = foldl' ()
+
+--         getLeftCell :: [Coord] -> Ce
 
 isOnSameRow :: Coord -> Coord -> Bool
 isOnSameRow (Coord (y, _)) (Coord (y2, _))

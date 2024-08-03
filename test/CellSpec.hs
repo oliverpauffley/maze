@@ -39,13 +39,17 @@ spec = do
         isOnSameRow (Coord (0,0)) (Coord (0, 5)) `shouldBe` True
         isOnSameRow (Coord (1,0)) (Coord (0, 5)) `shouldBe` False
 
+      -- TODO fix this
       it "finds linked cells" $ do
         linkedCells exampleCell `shouldBe` [Coord (0,1), Coord (1,2), Coord (2,1)]
-        getLinkedRowCells exampleCell `shouldBe` [Coord (1,2)]
+        getLinkedRowCells linkedCellsMaze2 exampleLinkedCell `shouldBe` [Coord (0,0)]
 
       it "can link two cells together" $ do
-       getCell linkedCellsMaze (Coord (0,0)) `shouldBe` Just linkedTopLeftCell
-       getCell linkedCellsMaze (Coord (0,1)) `shouldBe` Just linkedTopRightCell
+       getCell linkedCellsMaze2 (Coord (0,0)) `shouldBe` Just linkedTopLeftCell
+       getCell linkedCellsMaze2 (Coord (0,1)) `shouldBe` Just linkedTopRightCell
+
+      it "can link three cells" $ do
+       getLinkedRowCells linkedCellsMaze3 exampleCell3  `shouldBe` [Coord(0,1), Coord (0,0)]
 
 
 exampleCell :: CellBoundaries
@@ -56,9 +60,30 @@ exampleCell = CellBoundaries
   WorldBoundary
   (Coord (1,1))
 
-linkedCellsMaze :: Maze
-linkedCellsMaze = linkCells (initBlankSquareMaze 2) (Coord (0,0), Coord (0,1))
+exampleCell3 :: CellBoundaries
+exampleCell3 = CellBoundaries
+  WorldBoundary
+  WorldBoundary
+  (AdjacentCell (Coord (0,1)))
+  WorldBoundary
+  (Coord (0,2))
 
+linkedCellsMaze2 :: Maze
+linkedCellsMaze2 = linkCells (initBlankSquareMaze 2) (Coord (0,0), Coord (0,1))
+
+linkedCellsMaze3 :: Maze
+linkedCellsMaze3 = secondLink
+  where initMaze = initBlankSquareMaze 3
+        firstLink = linkCells initMaze (Coord (0,0), Coord(0,1))
+        secondLink = linkCells firstLink (Coord (0,1), Coord(0,2))
+
+exampleLinkedCell :: CellBoundaries
+exampleLinkedCell = CellBoundaries
+  WorldBoundary
+  Wall
+  (AdjacentCell (Coord (0,0)))
+  WorldBoundary
+  (Coord (0,1))
 
 linkedTopLeftCell :: CellBoundaries
 linkedTopLeftCell = CellBoundaries WorldBoundary Wall WorldBoundary (AdjacentCell (Coord (0,1))) (Coord (0,0))
