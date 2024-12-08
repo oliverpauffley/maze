@@ -60,6 +60,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules: Maze
+                     BinaryTree
 
     -- other-modules:
 
@@ -72,7 +73,9 @@ library
                       hspec,
                       containers,
                       random,
-                      MonadRandom
+                      MonadRandom,
+                      transformers,
+                      mtl
 
 
     -- Directories containing source files.
@@ -99,7 +102,9 @@ executable maze
         base ^>=4.17.2.1,
         maze,
         containers,
-        gloss
+        gloss,
+        random,
+        MonadRandom
 
     -- Directories containing source files.
     hs-source-dirs:   app
