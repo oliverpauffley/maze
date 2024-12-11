@@ -1,7 +1,11 @@
 module Maze where
 
-import           Data.Map (Map)
-import qualified Data.Map as Map
+import           Control.Monad.Random      (Rand)
+import           Control.Monad.Random.Lazy (StdGen)
+import           Control.Monad.State       (MonadState (get, put), State)
+import           Control.Monad.Trans.State (StateT)
+import           Data.Map                  (Map)
+import qualified Data.Map                  as Map
 
 -- all mazes are square so width is height too
 type Width = Int
@@ -88,12 +92,12 @@ connections width (x, y) =
     if x < 0 then Just $ Edge (x - 1, y) Closed else Nothing -- west
   )
 
-connect :: Maze -> NodeID -> NodeID -> Maze
-connect m a b = case nodesDirection a b of
-  North -> connectN m a b
-  South -> connectS m a b
-  East  -> connectE m a b
-  West  -> connectW m a b
+connect :: NodeID -> NodeID -> StateT Maze IO ()
+connect a b = case nodesDirection a b of
+  North -> connectN a b
+  South -> connectS a b
+  East  -> connectE a b
+  West  -> connectW a b
 
 nodesDirection :: NodeID -> NodeID -> Direction
 nodesDirection (x1, y1) (x2, y2)
@@ -101,25 +105,38 @@ nodesDirection (x1, y1) (x2, y2)
   | x1 == x2 && y1 - 1 == y2 = South
   | y1 == y2 && x1 + 1 == x2 = East
   | y1 == y2 && x1 - 1 == x2 = West
+  | otherwise = error "can't determine direction between two nodes"
 
 -- | Connect connects two nodes together and returns the
 -- new maze with connected nodes
-connectN :: Maze -> NodeID -> NodeID -> Maze
-connectN m a b =
-  Map.adjust (\x -> x {north = Just (Edge b Open)}) a $
-    Map.adjust (\x -> x {south = Just (Edge a Open)}) b m
+connectN :: NodeID -> NodeID -> StateT Maze IO ()
+connectN a b = do
+  m <- get
+  let m' = Map.adjust (\x -> x {north = Just (Edge b Open)}) a m
+      m'' = Map.adjust (\x -> x {south = Just (Edge a Open)}) b m'
+  put m''
+  return ()
 
-connectS :: Maze -> NodeID -> NodeID -> Maze
-connectS m a b =
-  Map.adjust (\x -> x {south = Just (Edge b Open)}) a $
-    Map.adjust (\x -> x {north = Just (Edge a Open)}) b m
+connectS :: NodeID -> NodeID -> StateT Maze IO ()
+connectS a b = do
+  m <- get
+  let m' = Map.adjust (\x -> x {south = Just (Edge b Open)}) a m
+      m'' = Map.adjust (\x -> x {north = Just (Edge a Open)}) b m'
+  put m''
+  return ()
 
-connectE :: Maze -> NodeID -> NodeID -> Maze
-connectE m a b =
-  Map.adjust (\x -> x {east = Just (Edge b Open)}) a $
-    Map.adjust (\x -> x {west = Just (Edge a Open)}) b m
+connectE :: NodeID -> NodeID -> StateT Maze IO ()
+connectE a b = do
+  m <- get
+  let m' = Map.adjust (\x -> x {east = Just (Edge b Open)}) a m
+      m'' = Map.adjust (\x -> x {west = Just (Edge a Open)}) b m'
+  put m''
+  return ()
 
-connectW :: Maze -> NodeID -> NodeID -> Maze
-connectW m a b =
-  Map.adjust (\x -> x {west = Just (Edge b Open)}) a $
-    Map.adjust (\x -> x {east = Just (Edge a Open)}) b m
+connectW :: NodeID -> NodeID -> StateT Maze IO ()
+connectW a b = do
+  m <- get
+  let m' = Map.adjust (\x -> x {west = Just (Edge b Open)}) a m
+      m'' = Map.adjust (\x -> x {east = Just (Edge a Open)}) b m'
+  put m''
+  return ()

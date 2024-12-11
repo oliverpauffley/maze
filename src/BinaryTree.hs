@@ -3,25 +3,25 @@
 module BinaryTree where
 
 import           Control.Monad.Random
+import           Control.Monad.State
+import           Data.Foldable        (traverse_)
 import qualified Data.Map             as Map
 import           Data.Maybe           (catMaybes)
+import           Debug.Trace          (traceShow)
 import           Maze                 (Edge (Edge), Maze, MazeNode, Node (Node),
                                        connect)
 
-generate :: (MonadRandom m) => m Maze -> MazeNode -> m Maze
-generate maze (Node a _ n _ e _) = do
+generate :: MazeNode -> StateT Maze IO ()
+generate (Node a _ n _ e _) = do
   let choices = catMaybes [n, e]
   if null choices
-    then maze
+    then return ()
     else do
       (Edge b _) <- uniform $ catMaybes [n, e]
-      m <- maze
-      return $ connect m a b
+      connect a b
+      return ()
 
-generateMaze :: (MonadRandom m) => Maze -> m Maze
-generateMaze maze = go (pure maze) (Map.elems maze)
-  where
-    go m [] = m
-    go m (n : ns) = do
-      newMaze <- generate m n
-      go (pure newMaze) ns
+generateMaze :: StateT Maze IO ()
+generateMaze = do
+  m <- get
+  traverse_ generate (Map.elems m)

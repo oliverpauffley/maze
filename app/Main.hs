@@ -1,7 +1,7 @@
 module Main where
 
-import           BinaryTree           (generate, generateMaze)
-import           Control.Monad.Random
+import           BinaryTree                (generateMaze)
+import           Control.Monad.Trans.State
 import           Graphics.Gloss
 import           Maze
 
@@ -9,7 +9,7 @@ lineLength :: Float
 lineLength = 50
 
 mazeSize :: Int
-mazeSize = 12
+mazeSize = 100
 
 startWindowPos :: Float -> Int -> (Int, Int)
 startWindowPos len size =
@@ -19,9 +19,8 @@ startWindowPos len size =
 
 main :: IO ()
 main = do
-  let maze = newMaze mazeSize
-  generated <- BinaryTree.generateMaze maze
-  display (InWindow "Maze" (100, 100) (startWindowPos lineLength mazeSize)) white (drawMaze generated)
+  (_, maze) <- runStateT BinaryTree.generateMaze (newMaze mazeSize)
+  display (InWindow "Maze" (100, 100) (startWindowPos lineLength mazeSize)) white (drawMaze maze)
 
 drawMaze :: Maze -> Picture
 drawMaze maze =
