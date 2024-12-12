@@ -7,7 +7,6 @@ import           Control.Monad.State
 import           Data.Foldable        (traverse_)
 import qualified Data.Map             as Map
 import           Data.Maybe           (catMaybes)
-import           Debug.Trace          (traceShow)
 import           Maze                 (Edge (Edge), Maze, MazeNode, Node (Node),
                                        connect)
 

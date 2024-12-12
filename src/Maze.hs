@@ -20,7 +20,10 @@ data Direction = North | South | East | West
 data Path = Open | Closed
   deriving (Eq, Show)
 
-data Edge e = Edge NodeID e
+data Edge e = Edge
+  { nodeID :: NodeID,
+    e      :: Path
+  }
   deriving (Show)
 
 -- | returns the ID of the connected Node.

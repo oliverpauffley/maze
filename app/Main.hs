@@ -4,6 +4,7 @@ import           BinaryTree                (generateMaze)
 import           Control.Monad.Trans.State
 import           Graphics.Gloss
 import           Maze
+import qualified Sidewinder
 
 lineLength :: Float
 lineLength = 50
@@ -19,7 +20,7 @@ startWindowPos len size =
 
 main :: IO ()
 main = do
-  (_, maze) <- runStateT BinaryTree.generateMaze (newMaze mazeSize)
+  (_, maze) <- runStateT Sidewinder.generateMaze (newMaze mazeSize)
   display (InWindow "Maze" (100, 100) (startWindowPos lineLength mazeSize)) white (drawMaze maze)
 
 drawMaze :: Maze -> Picture
