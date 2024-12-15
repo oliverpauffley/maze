@@ -92,7 +92,7 @@ connections width (x, y) =
   ( if y < width - 1 then Just $ Edge (x, y + 1) Closed else Nothing, -- north
     if y > 0 then Just $ Edge (x, y - 1) Closed else Nothing, -- south
     if x < width - 1 then Just $ Edge (x + 1, y) Closed else Nothing, -- east
-    if x < 0 then Just $ Edge (x - 1, y) Closed else Nothing -- west
+    if x > 0 then Just $ Edge (x - 1, y) Closed else Nothing -- west
   )
 
 connect :: NodeID -> NodeID -> StateT Maze IO ()
