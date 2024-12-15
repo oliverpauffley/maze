@@ -83,8 +83,8 @@ newMaze :: Width -> Maze
 newMaze size =
   Map.fromList
     [ ((x, y), nodeWithConnections (x, y) () (connections size (x, y)))
-      | x <- [0 .. size - 1],
-        y <- [0 .. size - 1]
+      | y <- [0 .. size - 1],
+        x <- [0 .. size - 1]
     ]
 
 connections :: Width -> Position -> (Maybe (Edge Path), Maybe (Edge Path), Maybe (Edge Path), Maybe (Edge Path))
