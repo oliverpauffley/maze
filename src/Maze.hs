@@ -20,6 +20,10 @@ instance Ord NodeID where
 
 type Position = (Int, Int)
 
+-- | Pointwise addition
+(.+.) :: (Int, Int) -> (Int, Int) -> (Int, Int)
+(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
+
 data Direction = North | South | East | West
   deriving (Eq, Show)
 
@@ -80,12 +84,15 @@ newMaze size =
     ]
 
 connections :: Width -> Position -> Edges e
-connections width (x, y) =
-  ( if y < width - 1 then Just $ Edge (NodeID (x, y + 1)) Closed else Nothing, -- north
-    if y > 0 then Just $ Edge (NodeID (x, y - 1)) Closed else Nothing, -- south
-    if x < width - 1 then Just $ Edge (NodeID (x + 1, y)) Closed else Nothing, -- east
-    if x > 0 then Just $ Edge (NodeID (x - 1, y)) Closed else Nothing -- west
+connections width pos@(x, y) =
+  ( if y < width - 1 then connection North else Nothing, -- north
+    if y > 0 then connection South else Nothing, -- south
+    if x < width - 1 then connection East else Nothing, -- east
+    if x > 0 then connection West else Nothing -- west
   )
+  where
+    nid = NodeID pos
+    connection n = Just $ Edge (directionNode nid n) Closed
 
 connect :: NodeID -> NodeID -> Maze -> Maze
 connect a b m = case nodesDirection a b of
@@ -93,6 +100,12 @@ connect a b m = case nodesDirection a b of
   South -> connectS a b m
   East  -> connectE a b m
   West  -> connectW a b m
+
+directionNode :: NodeID -> Direction -> NodeID
+directionNode (NodeID pos) North = NodeID $ pos .+. (0, 1)
+directionNode (NodeID pos) South = NodeID $ pos .+. (0, -1)
+directionNode (NodeID pos) East  = NodeID $ pos .+. (1, 0)
+directionNode (NodeID pos) West  = NodeID $ pos .+. (-1, 0)
 
 nodesDirection :: NodeID -> NodeID -> Direction
 nodesDirection (NodeID (x1, y1)) (NodeID (x2, y2))
