@@ -30,7 +30,7 @@ generate node = do
     then return ()
     else do
       choice <- Random.fromList choices
-      uncurry connect choice
+      modify $ uncurry connect choice
 
 getChoices :: Maze -> MazeNode -> [((NodeID, NodeID), Rational)]
 getChoices maze node@(Node id _ n _ e _) = eastProb ++ northProb

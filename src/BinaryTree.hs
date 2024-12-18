@@ -17,7 +17,7 @@ generate (Node a _ n _ e _) = do
     then return ()
     else do
       (Edge b _) <- uniform $ catMaybes [n, e]
-      connect a b
+      modify $ connect a b
       return ()
 
 generateMaze :: StateT Maze IO ()

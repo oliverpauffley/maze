@@ -48,7 +48,7 @@ data Node a e = Node
   }
   deriving (Show, Eq)
 
-nodeWithConnections :: Position -> a -> (Maybe (Edge e), Maybe (Edge e), Maybe (Edge e), Maybe (Edge e)) -> Node a e
+nodeWithConnections :: Position -> a -> Edges e -> Node a e
 nodeWithConnections position val (n, s, e, w) =
   Node
     { nid = NodeID position,
@@ -79,7 +79,7 @@ newMaze size =
         x <- [0 .. size - 1]
     ]
 
-connections :: Width -> Position -> (Maybe (Edge Path), Maybe (Edge Path), Maybe (Edge Path), Maybe (Edge Path))
+connections :: Width -> Position -> Edges e
 connections width (x, y) =
   ( if y < width - 1 then Just $ Edge (NodeID (x, y + 1)) Closed else Nothing, -- north
     if y > 0 then Just $ Edge (NodeID (x, y - 1)) Closed else Nothing, -- south
@@ -87,13 +87,12 @@ connections width (x, y) =
     if x > 0 then Just $ Edge (NodeID (x - 1, y)) Closed else Nothing -- west
   )
 
-connect :: NodeID -> NodeID -> StateT Maze IO ()
-connect a b = case nodesDirection a b of
-  North -> connectN a b
-  South -> connectS a b
-  East  -> connectE a b
-  West  -> connectW a b
-
+connect :: NodeID -> NodeID -> Maze -> Maze
+connect a b m = case nodesDirection a b of
+  North -> connectN a b m
+  South -> connectS a b m
+  East  -> connectE a b m
+  West  -> connectW a b m
 
 nodesDirection :: NodeID -> NodeID -> Direction
 nodesDirection (NodeID (x1, y1)) (NodeID (x2, y2))
@@ -105,22 +104,25 @@ nodesDirection (NodeID (x1, y1)) (NodeID (x2, y2))
 
 -- | Connect connects two nodes together and returns the
 -- new maze with connected nodes
-connectN :: NodeID -> NodeID -> StateT Maze IO ()
-connectN a b = do
-  modify $ Map.adjust (\x -> x {north = Just (Edge b Open)}) a
-  modify $ Map.adjust (\x -> x {south = Just (Edge a Open)}) b
+connectN :: NodeID -> NodeID -> Maze -> Maze
+connectN a b m =
+  Map.adjust (\x -> x {north = Just (Edge b Open)}) a $
+    Map.adjust (\x -> x {south = Just (Edge a Open)}) b m
 
-connectS :: NodeID -> NodeID -> StateT Maze IO ()
-connectS a b = do
-  modify $ Map.adjust (\x -> x {south = Just (Edge b Open)}) a
-  modify $ Map.adjust (\x -> x {north = Just (Edge a Open)}) b
+connectS :: NodeID -> NodeID -> Maze -> Maze
+connectS a b m =
+  do
+    Map.adjust (\x -> x {south = Just (Edge b Open)}) a
+    $ Map.adjust (\x -> x {north = Just (Edge a Open)}) b m
 
-connectE :: NodeID -> NodeID -> StateT Maze IO ()
-connectE a b = do
-  modify $ Map.adjust (\x -> x {east = Just (Edge b Open)}) a
-  modify $ Map.adjust (\x -> x {west = Just (Edge a Open)}) b
+connectE :: NodeID -> NodeID -> Maze -> Maze
+connectE a b m =
+  do
+    Map.adjust (\x -> x {east = Just (Edge b Open)}) a
+    $ Map.adjust (\x -> x {west = Just (Edge a Open)}) b m
 
-connectW :: NodeID -> NodeID -> StateT Maze IO ()
-connectW a b = do
-  modify $ Map.adjust (\x -> x {west = Just (Edge b Open)}) a
-  modify $ Map.adjust (\x -> x {east = Just (Edge a Open)}) b
+connectW :: NodeID -> NodeID -> Maze -> Maze
+connectW a b m =
+  do
+    Map.adjust (\x -> x {west = Just (Edge b Open)}) a
+    $ Map.adjust (\x -> x {east = Just (Edge a Open)}) b m
