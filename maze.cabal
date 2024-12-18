@@ -143,4 +143,5 @@ test-suite maze-test
         base ^>=4.17.2.1,
         maze,
         hspec,
-        containers
+        containers,
+        transformers

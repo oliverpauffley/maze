@@ -1,16 +1,22 @@
 module Maze where
 
-import           Control.Monad.Random      (Rand)
-import           Control.Monad.Random.Lazy (StdGen)
-import           Control.Monad.State       (MonadState (get, put), State)
-import           Control.Monad.Trans.State (StateT)
-import           Data.Map                  (Map)
-import qualified Data.Map                  as Map
+import           Control.Monad.Trans.State.Strict (StateT, modify)
+import           Data.Map.Strict                  (Map)
+import qualified Data.Map.Strict                  as Map
 
 -- all mazes are square so width is height too
 type Width = Int
 
-type NodeID = (Int, Int)
+newtype NodeID = NodeID (Int, Int)
+  deriving (Show, Eq)
+
+instance Ord NodeID where
+  compare (NodeID (x1, y1)) (NodeID (x2, y2))
+    | x1 == x2 && y1 == y2 = EQ
+    | y1 > y2 = GT
+    | y1 < y2 = LT
+    | x1 < x2 = LT
+    | otherwise = GT
 
 type Position = (Int, Int)
 
@@ -24,7 +30,7 @@ data Edge e = Edge
   { nodeID :: NodeID,
     e      :: Path
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 -- | returns the ID of the connected Node.
 edgeToNodeID :: Edge e -> NodeID
@@ -40,12 +46,12 @@ data Node a e = Node
     east  :: Maybe (Edge e),
     west  :: Maybe (Edge e)
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
-nodeWithConnections :: NodeID -> a -> (Maybe (Edge e), Maybe (Edge e), Maybe (Edge e), Maybe (Edge e)) -> Node a e
-nodeWithConnections nodeID val (n, s, e, w) =
+nodeWithConnections :: Position -> a -> (Maybe (Edge e), Maybe (Edge e), Maybe (Edge e), Maybe (Edge e)) -> Node a e
+nodeWithConnections position val (n, s, e, w) =
   Node
-    { nid = nodeID,
+    { nid = NodeID position,
       value = val,
       north = n,
       south = s,
@@ -54,20 +60,6 @@ nodeWithConnections nodeID val (n, s, e, w) =
     }
 
 type QuadGraph a e = Map NodeID (Node a e)
-
-insert :: QuadGraph a e -> NodeID -> a -> QuadGraph a e
-insert graph nodeID val =
-  Map.insert
-    nodeID
-    Node
-      { nid = nodeID,
-        value = val,
-        north = Nothing,
-        south = Nothing,
-        east = Nothing,
-        west = Nothing
-      }
-    graph
 
 type Maze = QuadGraph () Path
 
@@ -82,17 +74,17 @@ mazeToList = Map.elems
 newMaze :: Width -> Maze
 newMaze size =
   Map.fromList
-    [ ((x, y), nodeWithConnections (x, y) () (connections size (x, y)))
+    [ (NodeID (x, y), nodeWithConnections (x, y) () (connections size (x, y)))
       | y <- [0 .. size - 1],
         x <- [0 .. size - 1]
     ]
 
 connections :: Width -> Position -> (Maybe (Edge Path), Maybe (Edge Path), Maybe (Edge Path), Maybe (Edge Path))
 connections width (x, y) =
-  ( if y < width - 1 then Just $ Edge (x, y + 1) Closed else Nothing, -- north
-    if y > 0 then Just $ Edge (x, y - 1) Closed else Nothing, -- south
-    if x < width - 1 then Just $ Edge (x + 1, y) Closed else Nothing, -- east
-    if x > 0 then Just $ Edge (x - 1, y) Closed else Nothing -- west
+  ( if y < width - 1 then Just $ Edge (NodeID (x, y + 1)) Closed else Nothing, -- north
+    if y > 0 then Just $ Edge (NodeID (x, y - 1)) Closed else Nothing, -- south
+    if x < width - 1 then Just $ Edge (NodeID (x + 1, y)) Closed else Nothing, -- east
+    if x > 0 then Just $ Edge (NodeID (x - 1, y)) Closed else Nothing -- west
   )
 
 connect :: NodeID -> NodeID -> StateT Maze IO ()
@@ -102,8 +94,9 @@ connect a b = case nodesDirection a b of
   East  -> connectE a b
   West  -> connectW a b
 
+
 nodesDirection :: NodeID -> NodeID -> Direction
-nodesDirection (x1, y1) (x2, y2)
+nodesDirection (NodeID (x1, y1)) (NodeID (x2, y2))
   | x1 == x2 && y1 + 1 == y2 = North
   | x1 == x2 && y1 - 1 == y2 = South
   | y1 == y2 && x1 + 1 == x2 = East
@@ -114,32 +107,20 @@ nodesDirection (x1, y1) (x2, y2)
 -- new maze with connected nodes
 connectN :: NodeID -> NodeID -> StateT Maze IO ()
 connectN a b = do
-  m <- get
-  let m' = Map.adjust (\x -> x {north = Just (Edge b Open)}) a m
-      m'' = Map.adjust (\x -> x {south = Just (Edge a Open)}) b m'
-  put m''
-  return ()
+  modify $ Map.adjust (\x -> x {north = Just (Edge b Open)}) a
+  modify $ Map.adjust (\x -> x {south = Just (Edge a Open)}) b
 
 connectS :: NodeID -> NodeID -> StateT Maze IO ()
 connectS a b = do
-  m <- get
-  let m' = Map.adjust (\x -> x {south = Just (Edge b Open)}) a m
-      m'' = Map.adjust (\x -> x {north = Just (Edge a Open)}) b m'
-  put m''
-  return ()
+  modify $ Map.adjust (\x -> x {south = Just (Edge b Open)}) a
+  modify $ Map.adjust (\x -> x {north = Just (Edge a Open)}) b
 
 connectE :: NodeID -> NodeID -> StateT Maze IO ()
 connectE a b = do
-  m <- get
-  let m' = Map.adjust (\x -> x {east = Just (Edge b Open)}) a m
-      m'' = Map.adjust (\x -> x {west = Just (Edge a Open)}) b m'
-  put m''
-  return ()
+  modify $ Map.adjust (\x -> x {east = Just (Edge b Open)}) a
+  modify $ Map.adjust (\x -> x {west = Just (Edge a Open)}) b
 
 connectW :: NodeID -> NodeID -> StateT Maze IO ()
 connectW a b = do
-  m <- get
-  let m' = Map.adjust (\x -> x {west = Just (Edge b Open)}) a m
-      m'' = Map.adjust (\x -> x {east = Just (Edge a Open)}) b m'
-  put m''
-  return ()
+  modify $ Map.adjust (\x -> x {west = Just (Edge b Open)}) a
+  modify $ Map.adjust (\x -> x {east = Just (Edge a Open)}) b

@@ -1,7 +1,7 @@
 module Main where
 
-import           BinaryTree                (generateMaze)
-import           Control.Monad.Trans.State
+import           BinaryTree                       (generateMaze)
+import           Control.Monad.Trans.State.Strict
 import           Graphics.Gloss
 import           Maze
 import qualified Sidewinder
@@ -10,17 +10,18 @@ lineLength :: Float
 lineLength = 50
 
 mazeSize :: Int
-mazeSize = 100
+mazeSize = 20
 
 startWindowPos :: Float -> Int -> (Int, Int)
 startWindowPos len size =
-  ( (size * round len) `div` 2,
-    (size * round len) `div` 2
+  ( (size * round len) `div` 4,
+    (size * round len) `div` 4
   )
 
 main :: IO ()
 main = do
   (_, maze) <- runStateT Sidewinder.generateMaze (newMaze mazeSize)
+  print maze
   display (InWindow "Maze" (100, 100) (startWindowPos lineLength mazeSize)) white (drawMaze maze)
 
 drawMaze :: Maze -> Picture
@@ -28,7 +29,7 @@ drawMaze maze =
   Pictures $ map drawNode (mazeToList maze)
 
 drawNode :: Node () Maze.Path -> Picture
-drawNode (Node (x, y) _ n s e w) =
+drawNode (Node (NodeID (x, y)) _ n s e w) =
   Pictures $
     map
       ( translate

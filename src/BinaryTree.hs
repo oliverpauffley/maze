@@ -3,12 +3,12 @@
 module BinaryTree where
 
 import           Control.Monad.Random
-import           Control.Monad.State
-import           Data.Foldable        (traverse_)
-import qualified Data.Map             as Map
-import           Data.Maybe           (catMaybes)
-import           Maze                 (Edge (Edge), Maze, MazeNode, Node (Node),
-                                       connect)
+import           Control.Monad.Trans.State.Strict
+import           Data.Foldable                    (traverse_)
+import qualified Data.Map                         as Map
+import           Data.Maybe                       (catMaybes)
+import           Maze                             (Edge (Edge), Maze, MazeNode,
+                                                   Node (Node), connect)
 
 generate :: MazeNode -> StateT Maze IO ()
 generate (Node a _ n _ e _) = do
