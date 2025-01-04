@@ -2,6 +2,7 @@ module Main where
 
 import           BinaryTree                       (generateMaze)
 import           Control.Monad.Trans.State.Strict
+import qualified Data.Map                         as Map
 import           Graphics.Gloss
 import           Maze
 import qualified Sidewinder
@@ -20,8 +21,8 @@ startWindowPos len size =
 
 main :: IO ()
 main = do
-  (_, maze) <- runStateT Sidewinder.generateMaze (newMaze mazeSize)
-  print maze
+  let m = newMaze mazeSize
+  (_, maze) <- runStateT (traverse Sidewinder.generate (Map.keys m)) m
   display (InWindow "Maze" (100, 100) (startWindowPos lineLength mazeSize)) white (drawMaze maze)
 
 drawMaze :: Maze -> Picture
