@@ -4,23 +4,20 @@ module BinaryTree where
 
 import           Control.Monad.Random
 import           Control.Monad.Trans.State.Strict
-import           Data.Foldable                    (traverse_)
 import qualified Data.Map                         as Map
 import           Data.Maybe                       (catMaybes)
-import           Maze                             (Edge (Edge), Maze, MazeNode,
-                                                   Node (Node), connect)
+import           Maze                             (Edge (Edge), Maze,
+                                                   Node (Node), NodeID, connect)
 
-generate :: MazeNode -> StateT Maze IO ()
-generate (Node a _ n _ e _) = do
-  let choices = catMaybes [n, e]
-  if null choices
-    then return ()
-    else do
-      (Edge b _) <- uniform $ catMaybes [n, e]
-      modify $ connect a b
-      return ()
-
-generateMaze :: StateT Maze IO ()
-generateMaze = do
-  m <- get
-  traverse_ generate (Map.elems m)
+generate :: NodeID -> StateT Maze IO ()
+generate nid = do
+  node <- gets (Map.lookup nid)
+  case node of
+    (Just (Node a _ n _ e _)) -> do
+      let choices = catMaybes [n, e]
+      if null choices
+        then return ()
+        else do
+          (Edge b _) <- uniform $ catMaybes [n, e]
+          modify $ connect a b
+    Nothing -> pure ()

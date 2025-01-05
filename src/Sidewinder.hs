@@ -1,11 +1,9 @@
 module Sidewinder where
 
-import           Control.Monad.Random             as Random
-import           Control.Monad.Trans.State.Strict
-import           Data.Foldable                    (traverse_)
-import           Data.Map.Strict                  as Map hiding (map, null)
+import           Control.Monad.Random             as Random (fromList)
+import           Control.Monad.Trans.State.Strict (StateT, get, modify)
+import           Data.Map.Strict                  as Map (lookup)
 import           Data.Maybe                       (catMaybes)
-import           Debug.Trace                      (traceShow)
 import           Maze                             (Edge (Edge, nodeID), Maze,
                                                    MazeNode, Node (Node),
                                                    NodeID, Path (Closed, Open),
@@ -14,16 +12,16 @@ import           Maze                             (Edge (Edge, nodeID), Maze,
 -- | Gets horizontal linked cells to the west
 linkedCells :: Maze -> MazeNode -> [MazeNode]
 linkedCells maze (Node _ _ _ _ _ w) = case w of
-  Just (Edge nodeID Open) -> case Map.lookup nodeID maze of
+  Just (Edge nid Open) -> case Map.lookup nid maze of
     Just node -> node : linkedCells maze node
     Nothing   -> error "linked cells went wrong"
   Just (Edge _ Closed) -> []
   Nothing -> []
 
 nodeToNodeWithNorthID :: MazeNode -> Maybe (NodeID, NodeID)
-nodeToNodeWithNorthID (Node id _ n _ _ _) = case n of
-  Just (Edge nodeID _) -> Just (id, nodeID)
-  Nothing              -> Nothing
+nodeToNodeWithNorthID (Node i _ n _ _ _) = case n of
+  Just (Edge nid _) -> Just (i, nid)
+  Nothing           -> Nothing
 
 generate :: NodeID -> StateT Maze IO ()
 generate nid = do
@@ -35,20 +33,15 @@ generate nid = do
       if null choices
         then return ()
         else do
-          choice <- traceShow choices Random.fromList choices
+          choice <- Random.fromList choices
           modify $ uncurry connect choice
     Nothing -> pure ()
 
 getChoices :: Maze -> MazeNode -> [((NodeID, NodeID), Rational)]
-getChoices maze node@(Node id _ n _ e _) = eastProb ++ northProb
+getChoices maze node@(Node i _ n _ e _) = eastProb ++ northProb
   where
-    eastCell = (,) . nodeID <$> e <*> Just id
+    eastCell = (,) . nodeID <$> e <*> Just i
     eastProb = map (flip (,) 0.5) (catMaybes [eastCell])
-    northCell = (,) . nodeID <$> n <*> Just id
-    northCells = traceShow ((linkedCells maze node), node) catMaybes $ northCell : map nodeToNodeWithNorthID (linkedCells maze node)
+    northCell = (,) . nodeID <$> n <*> Just i
+    northCells = catMaybes $ northCell : map nodeToNodeWithNorthID (linkedCells maze node)
     northProb = map (flip (,) (0.5 / fromIntegral (length northCells))) northCells
-
--- generateMaze :: StateT Maze IO ()
--- generateMaze = do
---   m <- get
---   mapM_ generate (Map.elems m)
