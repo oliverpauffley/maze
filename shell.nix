@@ -1,9 +1,9 @@
-{ pkgs ? import <nixpkgs> { } }:
+with import <nixpkgs> { };
+let
+  haskellPackages = pkgs.haskellPackages;
 
-with pkgs;
+  maze = haskellPackages.callPackage ./default.nix {};
 
-mkShell {
-  name = "Mazes";
-  buildInputs = [ mesa freeglut glm mesa_glu ];
-  LD_LIBRARY_PATH = with pkgs; "${freeglut}/lib";
+in pkgs.mkShell {
+  buildInputs = [haskellPackages.cabal-install maze];
 }

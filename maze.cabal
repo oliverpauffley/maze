@@ -107,6 +107,7 @@ executable maze
         MonadRandom,
         transformers,
         containers,
+        optapplicative-parser,
 
     -- Directories containing source files.
     hs-source-dirs:   app
