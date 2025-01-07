@@ -62,6 +62,7 @@ library
     exposed-modules: Maze
                      BinaryTree
                      Sidewinder
+                     Solve
 
     -- other-modules:
 
@@ -106,6 +107,7 @@ executable maze
         gloss,
         random,
         MonadRandom,
+        mtl,
         transformers,
         containers,
         optparse-applicative,

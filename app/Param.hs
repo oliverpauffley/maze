@@ -1,15 +1,7 @@
-{-# LANGUAGE OverloadedRecordDot #-}
 
 module Param where
 
-import qualified BinaryTree
-import           Control.Monad.Trans.State.Strict
-import qualified Data.Map                         as Map
-import           Draw                             (drawMaze)
-import           Graphics.Gloss
-import           Maze                             (newMaze)
 import           Options.Applicative
-import qualified Sidewinder
 
 data Config = Config
   { lineLength :: Float,
@@ -36,15 +28,3 @@ startWindowPos len size =
   ( (size * round len) `div` 4,
     (size * round len) `div` 4
   )
-
-run :: Algorithm -> IO ()
-run alg =
-  case alg of
-    BinaryTree cfg -> do
-      let m = newMaze cfg.mazeSize
-      maze <- execStateT (traverse BinaryTree.generate (Map.keys m)) m
-      display (InWindow "Maze" (100, 100) (startWindowPos cfg.lineLength cfg.mazeSize)) white (drawMaze cfg.lineLength maze)
-    Sidewinder cfg -> do
-      let m = newMaze cfg.mazeSize
-      maze <- execStateT (traverse Sidewinder.generate (Map.keys m)) m
-      display (InWindow "Maze" (100, 100) (startWindowPos cfg.lineLength cfg.mazeSize)) white (drawMaze cfg.lineLength maze)

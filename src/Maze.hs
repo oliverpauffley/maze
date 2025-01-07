@@ -1,8 +1,8 @@
 module Maze where
 
-import           Control.Monad.Trans.State.Strict (StateT, modify)
-import           Data.Map.Strict                  (Map)
-import qualified Data.Map.Strict                  as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe      (catMaybes)
 
 -- all mazes are square so width is height too
 type Width = Int
@@ -30,6 +30,10 @@ data Direction = North | South | East | West
 data Path = Open | Closed
   deriving (Eq, Show)
 
+isOpen :: Path -> Bool
+isOpen Open   = True
+isOpen Closed = False
+
 data Edge e = Edge
   { nodeID :: NodeID,
     e      :: Path
@@ -52,6 +56,9 @@ data Node a e = Node
   }
   deriving (Show, Eq)
 
+openPaths :: Node a Path -> [NodeID]
+openPaths (Node _ _ n s e w) = nodeID <$> (filter (\(Edge _ p) -> isOpen p) . catMaybes) [n, s, e, w]
+
 nodeWithConnections :: Position -> a -> Edges e -> Node a e
 nodeWithConnections position val (n, s, e, w) =
   Node
@@ -65,20 +72,20 @@ nodeWithConnections position val (n, s, e, w) =
 
 type QuadGraph a e = Map NodeID (Node a e)
 
-type Maze = QuadGraph () Path
+type Maze = QuadGraph (Maybe Int) Path
 
-type MazeNode = Node () Path
+type MazeNode = Node (Maybe Int) Path
 
 emptyMaze :: Maze
 emptyMaze = Map.empty
 
-mazeToList :: Maze -> [Node () Path]
+mazeToList :: Maze -> [MazeNode]
 mazeToList = Map.elems
 
 newMaze :: Width -> Maze
 newMaze size =
   Map.fromList
-    [ (NodeID (x, y), nodeWithConnections (x, y) () (connections size (x, y)))
+    [ (NodeID (x, y), nodeWithConnections (x, y) Nothing (connections size (x, y)))
       | y <- [0 .. size - 1],
         x <- [0 .. size - 1]
     ]
