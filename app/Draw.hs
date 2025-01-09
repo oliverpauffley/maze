@@ -6,6 +6,7 @@ import           App                         (Config (..), MazeBuilder)
 import           Control.Monad.RWS           (MonadReader (ask),
                                               MonadState (get),
                                               MonadWriter (listen))
+import           Graphics.Gloss              (mixColors)
 import qualified Graphics.Gloss              (Path,
                                               Picture (Blank, Line, Pictures),
                                               scale, text)
@@ -20,25 +21,22 @@ drawMaze :: MazeBuilder Config [NodeID] Maze Gloss.Picture
 drawMaze = do
   Config {..} <- ask
   maze <- get
-  let mazePicture = map (drawNode lineLength) (mazeToList maze)
+  let mazePicture = map (drawNode mazeSize lineLength withColor) (mazeToList maze)
   if solve
     then do
       solution <- snd <$> listen Solve.solve
       return $ Gloss.Pictures (mazePicture ++ [drawSolution lineLength solution])
     else return $ Gloss.Pictures mazePicture
 
-drawNode :: Float -> Node (Maybe Int) Maze.Path -> Gloss.Picture
-drawNode lineLength (Node (NodeID (x, y)) _ n s e w) =
+drawNode :: Int -> Float -> Bool -> Node (Maybe Int) Maze.Path -> Gloss.Picture
+drawNode size lineLength withColor (Node (NodeID (x, y)) val n s e w) =
   Gloss.Pictures $
-    map
-      ( translate
-          (fromIntegral x * lineLength)
-          (fromIntegral y * lineLength)
-      )
-      ( drawEdges
-          lineLength
-          (n, s, e, w)
-      )
+    map (translation x y) pictures
+  where
+    edges = drawEdges lineLength (n, s, e, w)
+    colorN = colorNode size lineLength val
+    translation a b = translate (fromIntegral a * lineLength) (fromIntegral b * lineLength)
+    pictures = if withColor then colorN : edges else edges
 
 drawSolution :: Float -> [NodeID] -> Gloss.Picture
 drawSolution lineLength solution = Gloss.Color Gloss.red $ Gloss.line $ map (pos . toPath) solution
@@ -54,7 +52,16 @@ drawEdges lineLength (n, s, e, w) =
     drawEdge w [(0, 0), (0, lineLength)]
   ]
 
-drawEdge :: Maybe (Maze.Edge Maze.Path) -> Graphics.Gloss.Path -> Gloss.Picture
+colorNode :: Int -> Float -> Maybe Int -> Gloss.Picture
+colorNode size ll (Just val) = translate (ll / 2) (ll / 2) $ Gloss.color (scaleColor size (fromIntegral val)) $ Gloss.rectangleSolid ll ll
+colorNode _ ll Nothing = translate (ll / 2) (ll / 2) $ Gloss.color Gloss.black $ Gloss.rectangleSolid ll ll
+
+greenSmoke = Gloss.makeColorI 113 123 112 1
+
+scaleColor :: Int -> Float -> Gloss.Color
+scaleColor size factor = mixColors (fromIntegral size * 2) factor greenSmoke Gloss.black
+
+drawEdge :: Maybe (Maze.Edge Maze.Path) -> Gloss.Path -> Gloss.Picture
 drawEdge Nothing p = Gloss.Line p
 drawEdge (Just (Edge _ e)) path = case e of
   Open   -> Gloss.Blank
