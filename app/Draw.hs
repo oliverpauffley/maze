@@ -1,5 +1,11 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Draw where
 
+import           App                         (Config (..), MazeBuilder)
+import           Control.Monad.RWS           (MonadReader (ask),
+                                              MonadState (get),
+                                              MonadWriter (listen))
 import qualified Graphics.Gloss              (Path,
                                               Picture (Blank, Line, Pictures),
                                               scale, text)
@@ -8,11 +14,18 @@ import           Graphics.Gloss.Data.Picture (translate)
 import           Maze                        (Edge (Edge), Edges, Maze,
                                               Node (Node), NodeID (NodeID),
                                               Path (Closed, Open), mazeToList)
-import           Param                       (Config (lineLength))
+import qualified Solve
 
-drawMaze :: Float -> Maze -> [NodeID] -> Gloss.Picture
-drawMaze lineLength maze solution =
-  Gloss.Pictures $ map (drawNode lineLength) (mazeToList maze) ++ [drawSolution lineLength solution]
+drawMaze :: MazeBuilder Config [NodeID] Maze Gloss.Picture
+drawMaze = do
+  Config {..} <- ask
+  maze <- get
+  let mazePicture = map (drawNode lineLength) (mazeToList maze)
+  if solve
+    then do
+      solution <- snd <$> listen Solve.solve
+      return $ Gloss.Pictures (mazePicture ++ [drawSolution lineLength solution])
+    else return $ Gloss.Pictures mazePicture
 
 drawNode :: Float -> Node (Maybe Int) Maze.Path -> Gloss.Picture
 drawNode lineLength (Node (NodeID (x, y)) _ n s e w) =

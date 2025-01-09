@@ -1,23 +1,30 @@
-{ mkDerivation, base, boxes, containers, gloss, hspec
-, hspec-discover, lib, MonadRandom, mtl, optparse-applicative
-, random, transformers
-}:
-mkDerivation {
-  pname = "maze";
-  version = "0.1.0.0";
-  src = ./.;
-  isLibrary = true;
-  isExecutable = true;
-  libraryHaskellDepends = [
-    base boxes containers hspec MonadRandom mtl random transformers
-  ];
-  executableHaskellDepends = [
-    base containers gloss MonadRandom optparse-applicative random
-    transformers
-  ];
-  testHaskellDepends = [ base containers hspec transformers ];
-  testToolDepends = [ hspec-discover ];
-  description = "Generates mazes randomly";
-  license = lib.licenses.bsd2;
-  mainProgram = "maze";
+let
+  # Read in the Niv sources
+  sources = import ./nix/sources.nix { };
+  # If ./nix/sources.nix file is not found run:
+  #   niv init
+  #   niv add input-output-hk/haskell.nix -n haskellNix
+
+  # Fetch the haskell.nix commit we have pinned with Niv
+  haskellNix = import sources.haskellNix { };
+  # If haskellNix is not found run:
+  #   niv add input-output-hk/haskell.nix -n haskellNix
+
+  # Import nixpkgs and pass the haskell.nix provided nixpkgsArgs
+  pkgs = import
+    # haskell.nix provides access to the nixpkgs pins which are used by our CI,
+    # hence you will be more likely to get cache hits when using these.
+    # But you can also just use your own, e.g. '<nixpkgs>'.
+    haskellNix.sources.nixpkgs-unstable
+    # These arguments passed to nixpkgs, include some patches and also
+    # the haskell.nix functionality itself as an overlay.
+    haskellNix.nixpkgsArgs;
+in pkgs.haskell-nix.project {
+  # 'cleanGit' cleans a source directory based on the files known by git
+  src = pkgs.haskell-nix.haskellLib.cleanGit {
+    name = "maze";
+    src = ./.;
+  };
+  # Specify the GHC version to use.
+  compiler-nix-name = "ghc982"; # Not required for `stack.yaml` based projects.
 }

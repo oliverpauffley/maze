@@ -3,37 +3,38 @@
 
 module Main where
 
+import           App
 import qualified BinaryTree
-import qualified Control.Monad.RWS                as RWS
-import           Control.Monad.Trans.State.Strict
-import qualified Data.Map                         as Map
-import           Draw                             (drawMaze)
+import           Data.Foldable       (traverse_)
+import qualified Data.Map            as Map
+import           Draw                (drawMaze)
 import           Graphics.Gloss
-import           Maze                             (Maze, NodeID (..), newMaze)
+import           Maze                (NodeID (..), newMaze)
 import           Options.Applicative
 import           Param
 import qualified Sidewinder
-import           Solve                            (distance, solve)
+import           Solve               (distance, solve)
 
 main :: IO ()
 main = do
-  alg <- execParser (info (algorithm <**> helper) idm)
-  run alg
+  customExecParser p opts >>= run
+  where
+    opts =
+      info
+        (algorithm <**> helper)
+        (fullDesc <> progDesc "Create and solve random mazes!")
+    p = prefs showHelpOnEmpty
 
 run :: Algorithm -> IO ()
 run alg = do
   case alg of
     BinaryTree cfg -> do
-      maze <- runAlgorithm BinaryTree.generate cfg
-      let solved = execState (distance 0 (NodeID (0, 0))) maze
-      let solution = snd $ RWS.evalRWS solve () solved
-      display (InWindow "Maze" (100, 100) (startWindowPos cfg.lineLength cfg.mazeSize)) white (drawMaze cfg.lineLength maze solution)
+      runAlgorithm BinaryTree.generate cfg
     Sidewinder cfg -> do
-      maze <- runAlgorithm Sidewinder.generate cfg
-      let solved = execState (distance 0 (NodeID (0, 0))) maze
-      let solution = snd $ RWS.evalRWS solve () solved
-      display (InWindow "Maze" (100, 100) (startWindowPos cfg.lineLength cfg.mazeSize)) white (drawMaze cfg.lineLength maze solution)
+      runAlgorithm Sidewinder.generate cfg
+  pure ()
   where
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      execStateT (traverse generate (Map.keys m)) m
+      (picture, maze, solution) <- runBuilder (traverse_ generate (Map.keys m) >> distance 0 (NodeID (0, 0)) >> Solve.solve >> drawMaze) c m
+      display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture

@@ -2,14 +2,15 @@
 -- Walks the maze an either cuts a path south or east.
 module BinaryTree where
 
+import           App                  (MazeBuilder)
 import           Control.Monad.Random
-import           Control.Monad.Trans.State.Strict
-import qualified Data.Map                         as Map
-import           Data.Maybe                       (catMaybes)
-import           Maze                             (Edge (Edge), Maze,
-                                                   Node (Node), NodeID, connect)
+import           Control.Monad.RWS
+import qualified Data.Map             as Map
+import           Data.Maybe           (catMaybes)
+import           Maze                 (Edge (Edge), Maze, Node (Node), NodeID,
+                                       connect)
 
-generate :: NodeID -> StateT Maze IO ()
+generate :: Monoid w => NodeID -> MazeBuilder c w Maze ()
 generate nid = do
   node <- gets (Map.lookup nid)
   case node of

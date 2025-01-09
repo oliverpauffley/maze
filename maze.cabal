@@ -63,6 +63,7 @@ library
                      BinaryTree
                      Sidewinder
                      Solve
+                     App
 
     -- other-modules:
 

@@ -1,17 +1,16 @@
 module Solve where
 
+import           App               (MazeBuilder)
 import           Control.Monad.RWS
-import qualified Control.Monad.Trans.State.Strict as State
-import           Data.Foldable                    (for_, minimumBy, traverse_)
-import           Data.Function                    (on)
-import qualified Data.Map                         as Map
-import           Data.Maybe                       (isJust, mapMaybe)
-import           Maze                             (Maze, Node (Node, value),
-                                                   NodeID, openPaths)
+import           Data.Foldable     (for_, minimumBy, traverse_)
+import           Data.Function     (on)
+import qualified Data.Map          as Map
+import           Data.Maybe        (isJust, mapMaybe)
+import           Maze              (Maze, Node (Node, value), NodeID, openPaths)
 
-distance :: Int -> NodeID -> State.State Maze ()
+distance :: Monoid w => Int -> NodeID -> MazeBuilder c w Maze ()
 distance d nid = do
-  m <- State.get
+  m <- get
   case Map.lookup nid m of
     Just node@(Node _ val _ _ _ _) ->
       if isJust val
@@ -26,7 +25,7 @@ distance d nid = do
 setValue :: Int -> NodeID -> Maze -> Maze
 setValue d = Map.adjust (\x -> x {value = Just d})
 
-solveNode :: NodeID -> RWS () [NodeID] Maze ()
+solveNode :: NodeID -> MazeBuilder c [NodeID] Maze ()
 solveNode nid = do
   m <- get
   tell [nid]
@@ -49,7 +48,7 @@ findLowestPath val ns m = do
   where
     nodeValue i m = Map.lookup i m >>= (\v -> (,) i <$> v) . value
 
-solve :: RWS () [NodeID] Maze ()
+solve :: MazeBuilder c [NodeID] Maze ()
 solve = do
   m <- get
   solveNode $ fst $ Map.findMax m
