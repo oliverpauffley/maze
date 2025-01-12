@@ -2,13 +2,17 @@ module Solve where
 
 import           App               (MazeBuilder)
 import           Control.Monad.RWS
-import           Data.Foldable     (for_, minimumBy, traverse_)
+import           Data.Foldable     (for_, maximumBy, minimumBy, traverse_)
 import           Data.Function     (on)
 import qualified Data.Map          as Map
 import           Data.Maybe        (isJust, mapMaybe)
-import           Maze              (Maze, Node (Node, value), NodeID, openPaths)
+import           Maze              (Maze, Node (Node, value), NodeID (NodeID),
+                                    openPaths)
 
-distance :: Monoid w => Int -> NodeID -> MazeBuilder c w Maze ()
+-- | a node position with it's distance from a starting postion.
+type NodeDistance = (NodeID, Int)
+
+distance :: (Monoid w) => Int -> NodeID -> MazeBuilder c w Maze ()
 distance d nid = do
   m <- get
   case Map.lookup nid m of
@@ -52,3 +56,28 @@ solve :: MazeBuilder c [NodeID] Maze ()
 solve = do
   m <- get
   solveNode $ fst $ Map.findMax m
+
+-- find the longestPath in the maze
+solveLongest :: MazeBuilder c [NodeID] Maze ()
+solveLongest = do
+  m <- get
+  solveNode $ maxElement m
+
+maxElement :: (Ord b) => Map.Map a (Node b e) -> a
+maxElement m = fst $ maximumBy (compare `on` value . snd) (Map.assocs m)
+
+-- | Finds a longest route through a maze by applying Djkstra's algorithm twice
+findLongestRoute :: MazeBuilder c [NodeID] Maze ()
+findLongestRoute = do
+  blankMaze <- get -- get the un-solved maze
+
+  -- solve once
+  distance 0 (NodeID (0, 0))
+
+  -- plot the distances from the highestElement
+
+  newStart <- gets maxElement
+
+  -- reset and solve again
+  put blankMaze
+  distance 0 newStart >> solveLongest

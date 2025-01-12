@@ -9,11 +9,11 @@ import           Data.Foldable       (traverse_)
 import qualified Data.Map            as Map
 import           Draw                (drawMaze)
 import           Graphics.Gloss
-import           Maze                (NodeID (..), newMaze)
+import           Maze                (newMaze)
 import           Options.Applicative
 import           Param
 import qualified Sidewinder
-import           Solve               (distance, solve)
+import           Solve               (findLongestRoute)
 
 main :: IO ()
 main = do
@@ -36,5 +36,6 @@ run alg = do
   where
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      (picture, maze, solution) <- runBuilder (traverse_ generate (Map.keys m) >> distance 0 (NodeID (0, 0)) >> Solve.solve >> drawMaze) c m
+      (_, maze, solution) <- runBuilder (traverse_ generate (Map.keys m) >> Solve.findLongestRoute) c m
+      (picture, _, _) <- runBuilder (drawMaze solution) c maze
       display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture

@@ -6,7 +6,8 @@ data Config = Config
   { lineLength :: Float,
     mazeSize   :: Int,
     solve      :: Bool,
-    withColor  :: Bool
+    withColor  :: Bool,
+    debug      :: Bool
   }
 
 type MazeBuilder config w s = RWST Config w s IO

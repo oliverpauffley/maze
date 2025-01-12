@@ -19,6 +19,7 @@ config =
     <*> option auto (long "maze_size" <> short 's' <> value 10 <> help "number of squares in maze")
     <*> switch (long "solve" <> help "print a solution")
     <*> switch (long "color" <> help "color the solution of the maze to see bias")
+    <*> switch (long "debug" <> help "print the Djkstra distances of the maze")
 
 startWindowPos :: Float -> Int -> (Int, Int)
 startWindowPos len size =
