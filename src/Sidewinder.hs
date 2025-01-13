@@ -3,7 +3,8 @@ module Sidewinder where
 import           App                  (MazeBuilder)
 import           Control.Monad.Random as Random (fromList)
 import           Control.Monad.RWS
-import           Data.Map.Strict      as Map (lookup)
+import           Data.Foldable        (traverse_)
+import           Data.Map.Strict      as Map (keys, lookup)
 import           Data.Maybe           (catMaybes)
 import           Maze                 (Edge (Edge, nodeID), Maze, MazeNode,
                                        Node (Node), NodeID, Path (Closed, Open),
@@ -45,3 +46,8 @@ generate nid = do
           choice <- Random.fromList choices
           modify $ uncurry connect choice
     Nothing -> pure ()
+
+generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze = do
+  ks <- gets Map.keys
+  traverse_ generate ks

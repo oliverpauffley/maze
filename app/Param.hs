@@ -3,13 +3,14 @@ module Param where
 import           App
 import           Options.Applicative
 
-data Algorithm = BinaryTree Config | Sidewinder Config
+data Algorithm = BinaryTree Config | Sidewinder Config | AldousBroder Config
 
 algorithm :: Parser Algorithm
 algorithm =
   hsubparser
     ( command "binary" (info (BinaryTree <$> config) (progDesc "pick from two options for each space"))
         <> command "sidewinder" (info (Sidewinder <$> config) (progDesc "similar to binary but pick from cells of carved spaces"))
+        <> command "aldous" (info (AldousBroder <$> config) (progDesc "randomly walk until all nodes are visited"))
     )
 
 config :: Parser Config

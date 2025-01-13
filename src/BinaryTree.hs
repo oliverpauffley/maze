@@ -5,12 +5,13 @@ module BinaryTree where
 import           App                  (MazeBuilder)
 import           Control.Monad.Random
 import           Control.Monad.RWS
+import           Data.Foldable        (traverse_)
 import qualified Data.Map             as Map
 import           Data.Maybe           (catMaybes)
 import           Maze                 (Edge (Edge), Maze, Node (Node), NodeID,
                                        connect)
 
-generate :: Monoid w => NodeID -> MazeBuilder c w Maze ()
+generate :: (Monoid w) => NodeID -> MazeBuilder c w Maze ()
 generate nid = do
   node <- gets (Map.lookup nid)
   case node of
@@ -20,5 +21,10 @@ generate nid = do
         then return ()
         else do
           (Edge b _) <- uniform $ catMaybes [n, e]
-          modify $ connect a b
+          modify' $ connect a b
     Nothing -> pure ()
+
+generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze = do
+  keys <- gets Map.keys
+  traverse_ generate keys

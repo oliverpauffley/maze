@@ -7,7 +7,6 @@ import           Control.Monad     (guard)
 import           Control.Monad.RWS (MonadReader (ask), MonadState (get),
                                     MonadWriter (listen), asks)
 import qualified Data.Map          as Map
-import           Debug.Trace
 import qualified Graphics.Gloss    as Gloss
 import           Maze              (Edge (Edge), Edges, Maze, Node (Node),
                                     NodeID (NodeID), Path (Closed, Open),

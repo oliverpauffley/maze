@@ -3,10 +3,9 @@
 
 module Main where
 
+import qualified AldousBroder
 import           App
 import qualified BinaryTree
-import           Data.Foldable       (traverse_)
-import qualified Data.Map            as Map
 import           Draw                (drawMaze)
 import           Graphics.Gloss
 import           Maze                (newMaze)
@@ -29,13 +28,15 @@ run :: Algorithm -> IO ()
 run alg = do
   case alg of
     BinaryTree cfg -> do
-      runAlgorithm BinaryTree.generate cfg
+      runAlgorithm BinaryTree.generateMaze cfg
     Sidewinder cfg -> do
-      runAlgorithm Sidewinder.generate cfg
+      runAlgorithm Sidewinder.generateMaze cfg
+    AldousBroder cfg -> do
+      runAlgorithm AldousBroder.generateMaze cfg
   pure ()
   where
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      (_, maze, solution) <- runBuilder (traverse_ generate (Map.keys m) >> Solve.findLongestRoute) c m
+      (_, maze, solution) <- runBuilder (generate >> Solve.findLongestRoute) c m
       (picture, _, _) <- runBuilder (drawMaze solution) c maze
       display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture
