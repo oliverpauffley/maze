@@ -7,6 +7,7 @@ import           Control.Monad     (guard)
 import           Control.Monad.RWS (MonadReader (ask), MonadState (get),
                                     MonadWriter (listen), asks)
 import qualified Data.Map          as Map
+import           Debug.Trace
 import qualified Graphics.Gloss    as Gloss
 import           Maze              (Edge (Edge), Edges, Maze, Node (Node),
                                     NodeID (NodeID), Path (Closed, Open),
@@ -16,21 +17,20 @@ drawMaze :: [NodeID] -> MazeBuilder Config [NodeID] Maze Gloss.Picture
 drawMaze solution = do
   Config {..} <- ask
   maze <- get
-  let (Just m) = maxSolutionInMaze solution maze
-  mazePicture <- mapM (drawNode m) (mazeToList maze)
+  mazePicture <- mapM drawNode (mazeToList maze)
   solutionPicture <- drawSolution solution
   return $ Gloss.pictures (solutionPicture : mazePicture)
 
 maxSolutionInMaze :: [NodeID] -> Maze -> Maybe Int
 maxSolutionInMaze xs m = do
-  square <- Map.lookup (last xs) m
+  square <- Map.lookup (head xs) m
   value square
 
-drawNode :: Int -> Node (Maybe Int) Maze.Path -> MazeBuilder Config [NodeID] Maze Gloss.Picture
-drawNode maxSol (Node (NodeID (x, y)) val n s e w) = do
+drawNode :: Node (Maybe Int) Maze.Path -> MazeBuilder Config [NodeID] Maze Gloss.Picture
+drawNode (Node (NodeID (x, y)) val n s e w) = do
   Config {..} <- ask
   debugLabels <- labels val
-  colors <- colorNode maxSol val
+  colors <- colorNode val
   edges <- drawEdges (n, s, e, w)
   return $
     Gloss.Pictures $
@@ -71,23 +71,21 @@ drawEdges (n, s, e, w) = do
       drawEdge w [(0, 0), (0, ll)]
     ]
 
-colorNode :: Int -> Maybe Int -> MazeBuilder Config [NodeID] m Gloss.Picture
-colorNode solMax ma = do
+colorNode :: Maybe Int -> MazeBuilder Config [NodeID] m Gloss.Picture
+colorNode ma = do
   Config {..} <- ask
   if not withColor
     then return mempty
-    else return $ trans lineLength $ colorN lineLength ma
+    else return $ trans lineLength $ colorN lineLength ma mazeSize
   where
     trans ll = Gloss.translate (ll / 2) (ll / 2)
 
-    colorN ll Nothing  = Gloss.color Gloss.black $ rec ll
-    colorN ll (Just a) = colorScale solMax a $ rec ll
+    colorN ll Nothing _   = Gloss.color Gloss.black $ rec ll
+    colorN ll (Just a) mS = colorScale mS a $ rec ll
 
     rec ll = Gloss.rectangleSolid ll ll
 
-    colorScale m val
-      | val < m = Gloss.color Gloss.white
-      | otherwise = Gloss.color $ Gloss.mixColors (fromIntegral m) (fromIntegral val) greenSmoke Gloss.black
+    colorScale m val = Gloss.color $ Gloss.mixColors (fromIntegral m * 4) (fromIntegral $ val - m) greenSmoke Gloss.black
 
 greenSmoke :: Gloss.Color
 greenSmoke = Gloss.makeColorI 113 123 112 1
