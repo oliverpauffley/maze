@@ -7,7 +7,7 @@ import           Data.Function     (on)
 import qualified Data.Map          as Map
 import           Data.Maybe        (isJust, mapMaybe)
 import           Maze              (Maze, Node (Node, value), NodeID (NodeID),
-                                    openPaths)
+                                    openConnections)
 
 -- | a node position with it's distance from a starting postion.
 type NodeDistance = (NodeID, Int)
@@ -21,7 +21,7 @@ distance d nid = do
         then return ()
         else do
           modify' $ setValue d nid
-          let toUpdate = openPaths node
+          let toUpdate = openConnections node
           traverse_ (distance (d + 1)) toUpdate
     Nothing -> return ()
 
@@ -37,7 +37,7 @@ solveNode nid = do
     Just node@(Node _ val _ _ _ _) ->
       case val of
         (Just v) -> do
-          let paths = openPaths node
+          let paths = openConnections node
               next = findLowestPath v paths m
           for_ next solveNode
         Nothing -> pure ()

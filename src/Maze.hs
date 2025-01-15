@@ -40,10 +40,6 @@ data Edge e = Edge
   }
   deriving (Show, Eq)
 
--- | returns the ID of the connected Node.
-edgeToNodeID :: Edge e -> NodeID
-edgeToNodeID (Edge nodeId _) = nodeId
-
 type Edges e = (Maybe (Edge e), Maybe (Edge e), Maybe (Edge e), Maybe (Edge e))
 
 data Node a e = Node
@@ -56,8 +52,20 @@ data Node a e = Node
   }
   deriving (Show, Eq)
 
-openPaths :: Node a Path -> [NodeID]
-openPaths (Node _ _ n s e w) = nodeID <$> (filter (\(Edge _ p) -> isOpen p) . catMaybes) [n, s, e, w]
+openConnections :: Node a Path -> [NodeID]
+openConnections = connectionsWith isOpen
+
+closedConnections :: Node a Path -> [NodeID]
+closedConnections = connectionsWith (not . isOpen)
+
+connectionsWith :: (Path -> Bool) -> Node a Path -> [NodeID]
+connectionsWith p n = nodeID <$> filter (\(Edge _ b) -> p b) (paths n)
+
+connections :: Node a Path -> [NodeID]
+connections n = nodeID <$> paths n
+
+paths :: Node a Path -> [Edge Path]
+paths (Node _ _ n s e w) = catMaybes [n, s, e, w]
 
 nodeWithConnections :: Position -> a -> Edges e -> Node a e
 nodeWithConnections position val (n, s, e, w) =
@@ -85,13 +93,13 @@ mazeToList = Map.elems
 newMaze :: Width -> Maze
 newMaze size =
   Map.fromList
-    [ (NodeID (x, y), nodeWithConnections (x, y) Nothing (connections size (x, y)))
+    [ (NodeID (x, y), nodeWithConnections (x, y) Nothing (mkConnections size (x, y)))
       | y <- [0 .. size - 1],
         x <- [0 .. size - 1]
     ]
 
-connections :: Width -> Position -> Edges e
-connections width pos@(x, y) =
+mkConnections :: Width -> Position -> Edges e
+mkConnections width pos@(x, y) =
   ( if y < width - 1 then connection North else Nothing, -- north
     if y > 0 then connection South else Nothing, -- south
     if x < width - 1 then connection East else Nothing, -- east

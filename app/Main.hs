@@ -13,6 +13,7 @@ import           Options.Applicative
 import           Param
 import qualified Sidewinder
 import           Solve               (findLongestRoute)
+import qualified Wilson
 
 main :: IO ()
 main = do
@@ -33,6 +34,8 @@ run alg = do
       runAlgorithm Sidewinder.generateMaze cfg
     AldousBroder cfg -> do
       runAlgorithm AldousBroder.generateMaze cfg
+    Wilson cfg -> do
+      runAlgorithm Wilson.generateMaze cfg
   pure ()
   where
     runAlgorithm generate c = do
