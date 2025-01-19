@@ -8,6 +8,7 @@ import           App
 import qualified BinaryTree
 import           Draw                (drawMaze)
 import           Graphics.Gloss
+import qualified HuntKill
 import           Maze                (newMaze)
 import           Options.Applicative
 import           Param
@@ -36,6 +37,8 @@ run alg = do
       runAlgorithm AldousBroder.generateMaze cfg
     Wilson cfg -> do
       runAlgorithm Wilson.generateMaze cfg
+    HuntKill cfg -> do
+      runAlgorithm HuntKill.generateMaze cfg
   pure ()
   where
     runAlgorithm generate c = do

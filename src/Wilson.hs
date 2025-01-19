@@ -20,6 +20,7 @@ generate :: (Monoid w) => Set.Set NodeID -> [NodeID] -> NodeID -> MazeBuilder c 
 generate unvisited path nid = do
   maze <- get
   case Map.lookup nid maze of
+    Nothing -> pure ()
     (Just n) -> do
       nextID <- uniform (connections n)
       let path' = updatePath path nextID
@@ -34,7 +35,6 @@ generate unvisited path nid = do
             else do
               newStart <- uniform unvisited'
               generate unvisited' [newStart] newStart
-    Nothing -> pure ()
 
 deleteRandom :: (Ord a) => Set.Set a -> IO (Set.Set a)
 deleteRandom ss = do

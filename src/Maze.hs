@@ -53,18 +53,21 @@ data Node a e = Node
   deriving (Show, Eq)
 
 openConnections :: Node a Path -> [NodeID]
-openConnections = connectionsWith isOpen
+openConnections = pathsWith isOpen
 
 closedConnections :: Node a Path -> [NodeID]
-closedConnections = connectionsWith (not . isOpen)
+closedConnections = pathsWith (not . isOpen)
 
-connectionsWith :: (Path -> Bool) -> Node a Path -> [NodeID]
-connectionsWith p n = nodeID <$> filter (\(Edge _ b) -> p b) (paths n)
+pathsWith :: (Path -> Bool) -> Node a Path -> [NodeID]
+pathsWith p n = nodeID <$> filter (\(Edge _ b) -> p b) (paths n)
 
 connections :: Node a Path -> [NodeID]
 connections n = nodeID <$> paths n
 
-paths :: Node a Path -> [Edge Path]
+connectionsWith :: (Edge e -> Bool) -> Node a e -> [NodeID]
+connectionsWith p n = nodeID <$> filter p (paths n)
+
+paths :: Node a e -> [Edge e]
 paths (Node _ _ n s e w) = catMaybes [n, s, e, w]
 
 nodeWithConnections :: Position -> a -> Edges e -> Node a e

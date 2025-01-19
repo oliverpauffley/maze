@@ -25,7 +25,9 @@ Example Binary Tree:
 +---+---+---+---+---+---+---+---+---+
 #+end_src
 
-* Generate Maze
-#+begin_src shell
-just run
-#+end_src
+*** Ideas to improve
+**** TODO
+Could I use the state of the maze during generation in a different way to the state during the solve? It seems that most algorithms could use the state as the visited cells and then clear and reuse for the solve. Might make sense to create a new maze within the generate maze steps.
+**** TODO
+Simulate Gloss
+Gloss has a simulate method that looks like it could be used to draw out the maze steps one by one?
