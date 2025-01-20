@@ -15,12 +15,12 @@ generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
 generateMaze = generate Set.empty (NodeID (0, 0))
 
 generate :: (Monoid w) => Set.Set NodeID -> NodeID -> MazeBuilder c w Maze ()
-generate visited nid = do
+generate visited i = do
   maze <- get
-  let visited' = Set.insert nid visited
+  let visited' = Set.insert i visited
   if length visited' == length maze
     then pure ()
-    else case Map.lookup nid maze of
+    else case Map.lookup i maze of
       Nothing -> pure ()
       (Just n) -> do
         let choices = connectionsWith (unVisited visited') n
@@ -28,7 +28,7 @@ generate visited nid = do
           then hunt visited'
           else do
             next <- uniform choices
-            modify' $ connect next nid
+            modify' $ connect next i
             generate visited' next
 
 unVisited :: Set.Set NodeID -> (Edge e -> Bool)
@@ -50,11 +50,11 @@ searchUnvisited visited = do
 
 -- | Returns the node ids of a node and it's neighbour where the node hasn't been visited but the neighbour has.
 withVisitedNeighbour :: Set.Set NodeID -> MazeNode -> Maybe (NodeID, NodeID)
-withVisitedNeighbour ss (Node nid _ n s e w) = do
-  guard $ Set.notMember nid ss
+withVisitedNeighbour ss (Node i _ n s e w) = do
+  guard $ Set.notMember i ss
   let xs = filter (`Set.member` ss) (map nodeID $ catMaybes [n, s, e, w])
   guard $ not (null xs)
-  Just (nid, head xs)
+  Just (i, head xs)
 
 hunt :: (Monoid w) => Set.Set NodeID -> MazeBuilder c w Maze ()
 hunt visited = do

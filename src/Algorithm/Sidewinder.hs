@@ -1,6 +1,6 @@
 module Algorithm.Sidewinder (generateMaze) where
 
-import           App                  (MazeBuilder)
+import           App                  (MazeBuilder, getNode)
 import           Control.Monad.Random as Random (fromList)
 import           Control.Monad.RWS
 import           Data.Foldable        (traverse_)
@@ -36,16 +36,13 @@ getChoices maze node@(Node i _ n _ e _) = eastProb ++ northProb
 generate :: (Monoid w) => NodeID -> MazeBuilder c w Maze ()
 generate nid = do
   maze <- get
-  let n = Map.lookup nid maze
-  case n of
-    (Just node) -> do
-      let choices = getChoices maze node
-      if null choices
-        then return ()
-        else do
+  node <- getNode nid
+  let choices = getChoices maze node
+  if null choices
+      then return ()
+      else do
           choice <- Random.fromList choices
           modify $ uncurry connect choice
-    Nothing -> pure ()
 
 generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
 generateMaze = do

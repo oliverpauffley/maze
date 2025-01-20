@@ -62,6 +62,7 @@ library
     exposed-modules: Maze
                      Solve
                      App
+                     DeadEnds
                      Algorithm.BinaryTree
                      Algorithm.Sidewinder
                      Algorithm.AldousBroder

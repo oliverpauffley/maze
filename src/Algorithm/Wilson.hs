@@ -1,6 +1,6 @@
 module Algorithm.Wilson (generateMaze) where
 
-import           App                  (MazeBuilder)
+import           App                  (MazeBuilder, getNode)
 import           Control.Monad.Random
 import           Control.Monad.RWS
 import           Data.Foldable        (traverse_)
@@ -18,23 +18,27 @@ generateMaze = do
 
 generate :: (Monoid w) => Set.Set NodeID -> [NodeID] -> NodeID -> MazeBuilder c w Maze ()
 generate unvisited path nid = do
-  maze <- get
-  case Map.lookup nid maze of
-    Nothing -> pure ()
-    (Just n) -> do
-      nextID <- uniform (connections n)
-      let path' = updatePath path nextID
-      if Set.member nextID unvisited
-        then
-          generate unvisited path' nextID
-        else do
-          connectAll path'
-          let unvisited' = deleteAll unvisited path'
-          if null unvisited'
-            then pure ()
-            else do
-              newStart <- uniform unvisited'
-              generate unvisited' [newStart] newStart
+  n <- getNode nid
+  nextID <- uniform (connections n)
+  let path' = updatePath path nextID
+  if Set.member nextID unvisited
+    then
+      generate unvisited path' nextID
+    else do
+      connectPath unvisited path'
+
+connectPath :: (Monoid w) => Set.Set NodeID -> [NodeID] -> MazeBuilder c w Maze ()
+connectPath unvisited path = do
+  connectAll path
+  let unvisited' = deleteAll unvisited path
+  if null unvisited'
+    then pure ()
+    else newStart unvisited'
+
+newStart :: (Monoid w) => Set.Set NodeID -> MazeBuilder c w Maze ()
+newStart unvisited = do
+  ns <- uniform unvisited
+  generate unvisited [ns] ns
 
 deleteRandom :: (Ord a) => Set.Set a -> IO (Set.Set a)
 deleteRandom ss = do

@@ -7,9 +7,9 @@ import           Control.Monad.RWS
 import qualified Data.Map             as Map
 import           Data.Maybe           (catMaybes)
 import qualified Data.Set             as Set
-import           Maze                 (Edge (Edge), Maze, MazeNode, Node (Node),
+import           Maze                 (Edge (Edge), Maze, Node (Node),
                                        NodeID (NodeID), Path (Closed, Open),
-                                       connect, nodeID)
+                                       connect)
 
 generate :: (Monoid w) => Set.Set NodeID -> NodeID -> MazeBuilder c w Maze ()
 generate visited nid = do
