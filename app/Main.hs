@@ -9,6 +9,7 @@ import qualified Algorithm.HuntKill     as HuntKill
 import qualified Algorithm.Sidewinder   as Sidewinder
 import qualified Algorithm.Wilson       as Wilson
 import           App
+import           DeadEnds               (getDeadEnds)
 import           Draw                   (drawMaze)
 import           Graphics.Gloss
 import           Maze                   (newMaze)
@@ -43,6 +44,6 @@ run alg = do
   where
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      (_, maze, solution) <- runBuilder (generate >> Solve.findLongestRoute) c m
-      (picture, _, _) <- runBuilder (drawMaze solution) c maze
+      (deadEnds, maze, solution) <- runBuilder (generate >> Solve.findLongestRoute >> getDeadEnds) c m
+      (picture, _, _) <- runBuilder (drawMaze solution deadEnds) c maze
       display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture

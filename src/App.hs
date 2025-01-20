@@ -5,11 +5,12 @@ import qualified Data.Map          as Map
 import           Maze              (Maze, MazeNode, NodeID)
 
 data Config = Config
-  { lineLength :: Float,
-    mazeSize   :: Int,
-    solve      :: Bool,
-    withColor  :: Bool,
-    debug      :: Bool
+  { lineLength    :: Float,
+    mazeSize      :: Int,
+    solve         :: Bool,
+    withColor     :: Bool,
+    countDeadEnds :: Bool,
+    debug         :: Bool
   }
 
 type MazeBuilder config w s = RWST Config w s IO

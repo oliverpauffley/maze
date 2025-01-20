@@ -2,23 +2,25 @@
 
 module Draw where
 
-import           App               (Config (..), MazeBuilder)
-import           Control.Monad     (guard)
-import           Control.Monad.RWS (MonadReader (ask), MonadState (get),
-                                    MonadWriter (listen), asks)
-import qualified Data.Map          as Map
-import qualified Graphics.Gloss    as Gloss
-import           Maze              (Edge (Edge), Edges, Maze, Node (Node),
-                                    NodeID (NodeID), Path (Closed, Open),
-                                    mazeToList, value)
+import           App                  (Config (..), MazeBuilder)
+import           Control.Monad        (guard)
+import           Control.Monad.Random (when)
+import           Control.Monad.RWS    (MonadReader (ask), MonadState (get),
+                                       MonadWriter (listen), asks)
+import qualified Data.Map             as Map
+import qualified Graphics.Gloss       as Gloss
+import           Maze                 (Edge (Edge), Edges, Maze, Node (Node),
+                                       NodeID (NodeID), Path (Closed, Open),
+                                       mazeToList, value)
 
-drawMaze :: [NodeID] -> MazeBuilder Config [NodeID] Maze Gloss.Picture
-drawMaze solution = do
+drawMaze :: [NodeID] -> [NodeID] -> MazeBuilder Config [NodeID] Maze Gloss.Picture
+drawMaze solution deadEnds = do
   Config {..} <- ask
   maze <- get
   mazePicture <- mapM drawNode (mazeToList maze)
   solutionPicture <- drawSolution solution
-  return $ Gloss.pictures (solutionPicture : mazePicture)
+  deadEndCount <- drawDeadEnds deadEnds
+  return $ Gloss.pictures (solutionPicture : deadEndCount : mazePicture)
 
 maxSolutionInMaze :: [NodeID] -> Maze -> Maybe Int
 maxSolutionInMaze xs m = do
@@ -94,5 +96,12 @@ drawEdge Nothing p = Gloss.Line p
 drawEdge (Just (Edge _ e)) path = case e of
   Open   -> Gloss.Blank
   Closed -> Gloss.Line path
+
+drawDeadEnds :: (Monoid w) => [NodeID] -> MazeBuilder Config w s Gloss.Picture
+drawDeadEnds ns = do
+  Config {..} <- ask
+  if countDeadEnds
+    then return (Gloss.scale 0.1 0.1 (Gloss.translate 0 (-120) (Gloss.text ("Dead ends: " <> show (length ns)))))
+    else return Gloss.blank
 
 -- TODO look into simulate from Gloss to show generation steps
