@@ -3,19 +3,20 @@
 
 module Main where
 
-import qualified Algorithm.AldousBroder as AldousBroder
-import qualified Algorithm.BinaryTree   as BinaryTree
-import qualified Algorithm.HuntKill     as HuntKill
-import qualified Algorithm.Sidewinder   as Sidewinder
-import qualified Algorithm.Wilson       as Wilson
+import qualified Algorithm.AldousBroder       as AldousBroder
+import qualified Algorithm.BinaryTree         as BinaryTree
+import qualified Algorithm.HuntKill           as HuntKill
+import qualified Algorithm.RecursiveBacktrack as RecursiveBacktrack
+import qualified Algorithm.Sidewinder         as Sidewinder
+import qualified Algorithm.Wilson             as Wilson
 import           App
-import           DeadEnds               (getDeadEnds)
-import           Draw                   (drawMaze)
+import           DeadEnds                     (getDeadEnds)
+import           Draw                         (drawMaze)
 import           Graphics.Gloss
-import           Maze                   (newMaze)
+import           Maze                         (newMaze)
 import           Options.Applicative
 import           Param
-import           Solve                  (findLongestRoute)
+import           Solve                        (findLongestRoute)
 
 main :: IO ()
 main = do
@@ -40,6 +41,8 @@ run alg = do
       runAlgorithm Wilson.generateMaze cfg
     HuntKill cfg -> do
       runAlgorithm HuntKill.generateMaze cfg
+    RecursiveBacktrack cfg -> do
+      runAlgorithm RecursiveBacktrack.generateMaze cfg
   pure ()
   where
     runAlgorithm generate c = do

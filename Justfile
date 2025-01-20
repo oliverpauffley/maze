@@ -1,5 +1,2 @@
-test:
-    cabal test --test-show-details=direct
-
-run:
-    cabal run
+build:
+    nix-build -A maze.components.exes.maze

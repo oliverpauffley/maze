@@ -9,6 +9,7 @@ data Algorithm
   | AldousBroder Config
   | Wilson Config
   | HuntKill Config
+  | RecursiveBacktrack Config
 
 algorithm :: Parser Algorithm
 algorithm =
@@ -18,6 +19,7 @@ algorithm =
         <> command "aldous" (info (AldousBroder <$> config) (progDesc "randomly walk until all nodes are visited"))
         <> command "wilson" (info (Wilson <$> config) (progDesc "randomly walk until nodes with loop checking"))
         <> command "hunt" (info (HuntKill <$> config) (progDesc "random walk but avoiding visiting the same nodes"))
+        <> command "recursive" (info (RecursiveBacktrack <$> config) (progDesc "random walk but avoiding visiting the same nodes - with backtracking"))
     )
 
 config :: Parser Config

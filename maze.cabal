@@ -68,6 +68,7 @@ library
                      Algorithm.AldousBroder
                      Algorithm.Wilson
                      Algorithm.HuntKill
+                     Algorithm.RecursiveBacktrack
 
     -- other-modules:
 
