@@ -3,18 +3,18 @@
 
 module Main where
 
-import qualified AldousBroder
+import qualified Algorithm.AldousBroder as AldousBroder
+import qualified Algorithm.BinaryTree   as BinaryTree
+import qualified Algorithm.HuntKill     as HuntKill
+import qualified Algorithm.Sidewinder   as Sidewinder
+import qualified Algorithm.Wilson       as Wilson
 import           App
-import qualified BinaryTree
-import           Draw                (drawMaze)
+import           Draw                   (drawMaze)
 import           Graphics.Gloss
-import qualified HuntKill
-import           Maze                (newMaze)
+import           Maze                   (newMaze)
 import           Options.Applicative
 import           Param
-import qualified Sidewinder
-import           Solve               (findLongestRoute)
-import qualified Wilson
+import           Solve                  (findLongestRoute)
 
 main :: IO ()
 main = do

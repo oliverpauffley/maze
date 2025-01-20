@@ -1,5 +1,5 @@
 -- | AldousBroder implements a random walk algorithm where we link nodes that are visited on the walk, finishing when all nodes have been visted.
-module AldousBroder where
+module Algorithm.AldousBroder (generateMaze) where
 
 import           App                  (MazeBuilder)
 import           Control.Monad.Random

@@ -1,6 +1,6 @@
 -- | Implements the binary tree algorithm for maze generation.
 -- Walks the maze an either cuts a path south or east.
-module BinaryTree where
+module Algorithm.BinaryTree (generateMaze) where
 
 import           App                  (MazeBuilder)
 import           Control.Monad.Random

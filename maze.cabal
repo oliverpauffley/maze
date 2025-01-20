@@ -60,13 +60,13 @@ library
 
     -- Modules exported by the library.
     exposed-modules: Maze
-                     BinaryTree
-                     Sidewinder
-                     AldousBroder
-                     Wilson
-                     HuntKill
                      Solve
                      App
+                     Algorithm.BinaryTree
+                     Algorithm.Sidewinder
+                     Algorithm.AldousBroder
+                     Algorithm.Wilson
+                     Algorithm.HuntKill
 
     -- other-modules:
 

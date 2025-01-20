@@ -1,4 +1,4 @@
-module Sidewinder where
+module Algorithm.Sidewinder (generateMaze) where
 
 import           App                  (MazeBuilder)
 import           Control.Monad.Random as Random (fromList)

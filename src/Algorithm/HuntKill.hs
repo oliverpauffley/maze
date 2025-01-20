@@ -1,5 +1,5 @@
 -- | Implements the hunt and kill algorithm where we avoid walking on nodes we have already visited and search or "hunt" for unvisited nodes once we get trapped.
-module HuntKill where
+module Algorithm.HuntKill where
 
 import           App                  (MazeBuilder)
 import           Control.Monad.Random (guard, uniform)
@@ -8,7 +8,7 @@ import qualified Data.Map             as Map
 import           Data.Maybe           (catMaybes, mapMaybe)
 import qualified Data.Set             as Set
 import           Maze                 (Edge (..), Maze, MazeNode, Node (..),
-                                       NodeID (NodeID), Path (Closed), connect,
+                                       NodeID (NodeID), connect,
                                        connectionsWith)
 
 generateMaze :: (Monoid w) => MazeBuilder c w Maze ()

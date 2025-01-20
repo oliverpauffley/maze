@@ -1,4 +1,4 @@
-module Wilson where
+module Algorithm.Wilson (generateMaze) where
 
 import           App                  (MazeBuilder)
 import           Control.Monad.Random
