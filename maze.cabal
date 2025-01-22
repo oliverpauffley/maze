@@ -63,6 +63,7 @@ library
                      Solve
                      App
                      DeadEnds
+                     Mask
                      Algorithm.BinaryTree
                      Algorithm.Sidewinder
                      Algorithm.AldousBroder
@@ -83,7 +84,8 @@ library
                       random,
                       MonadRandom,
                       transformers,
-                      mtl
+                      mtl,
+                      JuicyPixels
 
 
     -- Directories containing source files.
@@ -101,7 +103,7 @@ executable maze
 
     -- Modules included in this executable, other than Main.
     other-modules:
-                    Param, Draw
+                    Param, Draw, Image
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -117,6 +119,7 @@ executable maze
         transformers,
         containers,
         optparse-applicative,
+        JuicyPixels
 
     -- Directories containing source files.
     hs-source-dirs:   app

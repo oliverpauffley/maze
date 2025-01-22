@@ -13,7 +13,10 @@ import           App
 import           DeadEnds                     (getDeadEnds)
 import           Draw                         (drawMaze)
 import           Graphics.Gloss
-import           Maze                         (newMaze)
+import           Image                        (imageToMask, maskToBlankMaze,
+                                               parseImage)
+import           Mask                         (killNodes)
+import           Maze                         (NodeID (NodeID), newMaze)
 import           Options.Applicative
 import           Param
 import           Solve                        (findLongestRoute)
@@ -47,6 +50,8 @@ run alg = do
   where
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      (deadEnds, maze, solution) <- runBuilder (generate >> Solve.findLongestRoute >> getDeadEnds) c m
+      Right img <- parseImage "masks/sandy.png"
+
+      (deadEnds, maze, solution) <- runBuilder (maskToBlankMaze img  >> generate >> Solve.findLongestRoute >> getDeadEnds) c m
       (picture, _, _) <- runBuilder (drawMaze solution deadEnds) c maze
       display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture

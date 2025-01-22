@@ -1,15 +1,17 @@
 -- | Randomly walks on unvisited nodes. When it reaches a node surrounded by visited cells it backtracks and tries again
 module Algorithm.RecursiveBacktrack (generateMaze) where
 
-import           App                  (MazeBuilder, getNode)
+import           App                  (MazeBuilder, getNode, randomNode)
 import           Control.Monad.Random (uniform)
 import           Control.Monad.RWS
 import qualified Data.Set             as Set
-import           Maze                 (Edge (Edge), Maze, NodeID (NodeID),
+import           Maze                 (Edge (Edge), Maze, Node (nid), NodeID,
                                        connect, connectionsWith)
 
 generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
-generateMaze = generate Set.empty [NodeID (0, 0)]
+generateMaze = do
+  start <- nid <$> randomNode
+  generate Set.empty [start]
 
 generate :: (Monoid w) => Set.Set NodeID -> [NodeID] -> MazeBuilder c w Maze ()
 generate _ [] = pure ()
