@@ -1,13 +1,13 @@
 -- | AldousBroder implements a random walk algorithm where we link nodes that are visited on the walk, finishing when all nodes have been visted.
 module Algorithm.AldousBroder (generateMaze) where
 
-import           App                  (MazeBuilder)
+import           App                  (MazeBuilder, randomNode)
 import           Control.Monad.Random
 import           Control.Monad.RWS
 import qualified Data.Map             as Map
 import           Data.Maybe           (catMaybes)
 import qualified Data.Set             as Set
-import           Maze                 (Edge (Edge), Maze, Node (Node),
+import           Maze                 (Edge (Edge), Maze, Node (Node, nid),
                                        NodeID (NodeID), Path (Closed, Open),
                                        connect)
 
@@ -32,4 +32,4 @@ generate visited nid = do
 
 generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
 generateMaze =
-  generate Set.empty (NodeID (0, 0))
+  randomNode >>= generate Set.empty . nid

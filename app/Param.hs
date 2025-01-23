@@ -31,6 +31,7 @@ config =
     <*> switch (long "color" <> help "color the solution of the maze to see bias")
     <*> switch (long "deadends" <> short 'd' <> help "count the number of dead ends in maze")
     <*> switch (long "debug" <> help "print the Djkstra distances of the maze")
+    <*> optional (strOption (long "mask" <> short 'm' <> help "filepath to mask png file. Maze size will be ignored if this option is set. Does not work with some maze building algorthims."))
 
 startWindowPos :: Float -> Int -> (Int, Int)
 startWindowPos len size =

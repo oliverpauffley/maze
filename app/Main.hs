@@ -50,8 +50,6 @@ run alg = do
   where
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      Right img <- parseImage "masks/sandy.png"
-
-      (deadEnds, maze, solution) <- runBuilder (maskToBlankMaze img  >> generate >> Solve.findLongestRoute >> getDeadEnds) c m
+      (deadEnds, maze, solution) <- runBuilder (maskToBlankMaze >> generate >> Solve.findLongestRoute >> getDeadEnds) c m
       (picture, _, _) <- runBuilder (drawMaze solution deadEnds) c maze
       display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture

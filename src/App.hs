@@ -11,7 +11,8 @@ data Config = Config
     solve         :: Bool,
     withColor     :: Bool,
     countDeadEnds :: Bool,
-    debug         :: Bool
+    debug         :: Bool,
+    mask          :: Maybe FilePath
   }
 
 type MazeBuilder config w s = RWST Config w s IO
@@ -26,7 +27,7 @@ getNode i = do
   m <- get
   case Map.lookup i m of
     Just n  -> return n
-    Nothing -> error "could not get node from ID"
+    Nothing -> error ("could not get node from ID: " ++ show i)
 
 randomNode :: (Monoid w) => MazeBuilder c w Maze MazeNode
 randomNode = do

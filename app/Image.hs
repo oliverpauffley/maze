@@ -1,7 +1,9 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- | parse images into pixel maps that can be used for masking mazes
 module Image where
 
-import           App               (Config, MazeBuilder)
+import           App               (Config (Config), MazeBuilder, mask)
 import           Codec.Picture     (DynamicImage,
                                     Image (imageData, imageHeight, imageWidth),
                                     Pixel (PixelBaseComponent, pixelAt), Pixel8,
@@ -34,17 +36,23 @@ squareImage img = generateImage (pixelAt img) edge edge
     edge = min (imageWidth img) (imageHeight img)
 
 imageToNode :: Image PixelRGB8 -> [(NodeID, PixelRGB8)]
-imageToNode img = [(NodeID (x, y), pixelAt img x y) | x <- [0 .. (width - 1)], y <- [0 .. (height - 1)]]
+imageToNode img = [(toNodeID x y, pixelAt img x y) | x <- [0 .. (width - 1)], y <- [0 .. (height - 1)]]
   where
     width = imageWidth img
     height = imageWidth img
+    toNodeID x y = NodeID (x, (height - 1) - y)
 
 blackPixel :: PixelRGB8 -> Bool
 blackPixel (PixelRGB8 r g b) = r + g + b < 30
 
-maskToBlankMaze :: (Monoid w) => ImageMask -> MazeBuilder Config w Maze ()
-maskToBlankMaze mask = do
-  put maze
-  killNodes (blackNodes mask)
+maskToBlankMaze :: (Monoid w) => MazeBuilder Config w Maze ()
+maskToBlankMaze = do
+  Config {..} <- ask
+  case mask of
+    Nothing -> pure ()
+    Just path -> do
+      Right imageMask <- liftIO $ parseImage path
+      put (maze imageMask)
+      killNodes (blackNodes imageMask)
   where
-    maze = newMaze (size mask)
+    maze m = newMaze (size m)
