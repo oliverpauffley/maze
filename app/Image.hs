@@ -5,10 +5,10 @@ module Image where
 
 import           App               (Config (Config), MazeBuilder, mask)
 import           Codec.Picture     (DynamicImage,
-                                    Image (imageData, imageHeight, imageWidth),
-                                    Pixel (PixelBaseComponent, pixelAt), Pixel8,
-                                    PixelRGB8 (PixelRGB8), convertRGB8,
-                                    dynamicPixelMap, generateImage, readPng)
+                                    Image (imageHeight, imageWidth),
+                                    Pixel (pixelAt), PixelRGB8 (PixelRGB8),
+                                    convertRGB8, dynamicPixelMap, generateImage,
+                                    readPng)
 import           Control.Monad.RWS
 import           Mask              (killNodes)
 import           Maze              (Maze, NodeID (NodeID), newMaze)

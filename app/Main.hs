@@ -13,10 +13,8 @@ import           App
 import           DeadEnds                     (getDeadEnds)
 import           Draw                         (drawMaze)
 import           Graphics.Gloss
-import           Image                        (imageToMask, maskToBlankMaze,
-                                               parseImage)
-import           Mask                         (killNodes)
-import           Maze                         (NodeID (NodeID), newMaze)
+import           Image                        (maskToBlankMaze)
+import           Maze                         (newMaze)
 import           Options.Applicative
 import           Param
 import           Solve                        (findLongestRoute)
