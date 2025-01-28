@@ -15,21 +15,23 @@ data Config = Config
     mask          :: Maybe FilePath
   }
 
-type MazeBuilder config w s = RWST Config w s IO
+type MazeBuilder config s = RWST Config () s IO
 
-runBuilder :: MazeBuilder Config w state a -> Config -> state -> IO (a, state, w)
-runBuilder = runRWST
+runBuilder :: MazeBuilder Config state a -> Config -> state -> IO (a, state)
+runBuilder app c s = do
+  (a, s', _) <- runRWST app c s
+  return (a, s')
 
 -- | This is a partial function to get nodes from IDs where we know that the node exists.
 --  will panic if node is not in map.
-getNode :: (Monoid w) => NodeID -> MazeBuilder c w Maze MazeNode
+getNode :: NodeID -> MazeBuilder c Maze MazeNode
 getNode i = do
   m <- get
   case Map.lookup i m of
     Just n  -> return n
     Nothing -> error ("could not get node from ID: " ++ show i)
 
-randomNode :: (Monoid w) => MazeBuilder c w Maze MazeNode
+randomNode :: MazeBuilder c Maze MazeNode
 randomNode = do
   m <- get
   uniform $ Map.elems m

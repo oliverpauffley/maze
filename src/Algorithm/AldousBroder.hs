@@ -11,7 +11,7 @@ import           Maze                 (Edge (Edge), Maze, Node (Node, nid),
                                        NodeID (NodeID), Path (Closed, Open),
                                        connect)
 
-generate :: (Monoid w) => Set.Set NodeID -> NodeID -> MazeBuilder c w Maze ()
+generate ::  Set.Set NodeID -> NodeID -> MazeBuilder c Maze ()
 generate visited nid = do
   maze <- get
   let visited' = Set.insert nid visited
@@ -30,6 +30,6 @@ generate visited nid = do
                 generate visited' nextID
       Nothing -> pure ()
 
-generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze ::  MazeBuilder c Maze ()
 generateMaze =
   randomNode >>= generate Set.empty . nid

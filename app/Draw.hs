@@ -2,18 +2,15 @@
 
 module Draw where
 
-import           App                  (Config (..), MazeBuilder)
-import           Control.Monad        (guard)
-import           Control.Monad.Random (when)
-import           Control.Monad.RWS    (MonadReader (ask), MonadState (get),
-                                       MonadWriter (listen), asks)
-import qualified Data.Map             as Map
-import qualified Graphics.Gloss       as Gloss
-import           Maze                 (Edge (Edge), Edges, Maze, Node (Node),
-                                       NodeID (NodeID), Path (Closed, Open),
-                                       mazeToList, value)
+import           App               (Config (..), MazeBuilder)
+import           Control.Monad.RWS (MonadReader (ask), MonadState (get), asks)
+import qualified Data.Map          as Map
+import qualified Graphics.Gloss    as Gloss
+import           Maze              (Edge (Edge), Edges, Maze, Node (Node),
+                                    NodeID (NodeID), Path (Closed, Open),
+                                    mazeToList, value)
 
-drawMaze :: [NodeID] -> [NodeID] -> MazeBuilder Config [NodeID] Maze Gloss.Picture
+drawMaze :: [NodeID] -> [NodeID] -> MazeBuilder Config Maze Gloss.Picture
 drawMaze solution deadEnds = do
   Config {..} <- ask
   maze <- get
@@ -27,7 +24,7 @@ maxSolutionInMaze xs m = do
   square <- Map.lookup (head xs) m
   value square
 
-drawNode :: Node (Maybe Int) Maze.Path -> MazeBuilder Config [NodeID] Maze Gloss.Picture
+drawNode :: Node (Maybe Int) Maze.Path -> MazeBuilder Config Maze Gloss.Picture
 drawNode (Node (NodeID (x, y)) val n s e w) = do
   Config {..} <- ask
   debugLabels <- labels val
@@ -39,7 +36,7 @@ drawNode (Node (NodeID (x, y)) val n s e w) = do
   where
     translation ll a b = Gloss.translate (fromIntegral a * ll) (fromIntegral b * ll)
 
-labels :: (Show a) => Maybe a -> MazeBuilder Config [NodeID] m Gloss.Picture
+labels :: (Show a) => Maybe a -> MazeBuilder Config m Gloss.Picture
 labels Nothing = return mempty
 labels (Just a) = do
   Config {..} <- ask
@@ -52,7 +49,7 @@ labels (Just a) = do
             Gloss.text $
               show a
 
-drawSolution :: [NodeID] -> MazeBuilder Config [NodeID] m Gloss.Picture
+drawSolution :: [NodeID] -> MazeBuilder Config m Gloss.Picture
 drawSolution solution = do
   Config {..} <- ask
   if solve
@@ -62,7 +59,7 @@ drawSolution solution = do
     pos ll (x, y) = (x * ll + ll / 2, y * ll + ll / 2)
     toPath (NodeID (x, y)) = (fromIntegral x, fromIntegral y)
 
-drawEdges :: Edges Maze.Path -> MazeBuilder Config [NodeID] m [Gloss.Picture]
+drawEdges :: Edges Maze.Path -> MazeBuilder Config m [Gloss.Picture]
 drawEdges (n, s, e, w) = do
   ll <- asks lineLength
   return
@@ -72,7 +69,7 @@ drawEdges (n, s, e, w) = do
       drawEdge w [(0, 0), (0, ll)]
     ]
 
-colorNode :: Maybe Int -> MazeBuilder Config [NodeID] m Gloss.Picture
+colorNode :: Maybe Int -> MazeBuilder Config m Gloss.Picture
 colorNode ma = do
   Config {..} <- ask
   if not withColor
@@ -97,7 +94,7 @@ drawEdge (Just (Edge _ e)) path = case e of
   Open   -> Gloss.Blank
   Closed -> Gloss.Line path
 
-drawDeadEnds :: (Monoid w) => [NodeID] -> MazeBuilder Config w s Gloss.Picture
+drawDeadEnds :: [NodeID] -> MazeBuilder Config s Gloss.Picture
 drawDeadEnds ns = do
   Config {..} <- ask
   if countDeadEnds

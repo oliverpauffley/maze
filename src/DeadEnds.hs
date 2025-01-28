@@ -7,7 +7,7 @@ import qualified Data.Map          as Map
 import           Maze              (Maze, MazeNode, Node (nid), NodeID,
                                     openConnections)
 
-getDeadEnds :: (Monoid w) => MazeBuilder c w Maze [NodeID]
+getDeadEnds :: MazeBuilder c Maze [NodeID]
 getDeadEnds = do
   m <- get
   let nodes = Map.elems m

@@ -8,7 +8,7 @@ import qualified Data.Map             as Map
 import qualified Data.Set             as Set
 import           Maze                 (Maze, NodeID, connect, connections)
 
-generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze :: MazeBuilder c Maze ()
 generateMaze = do
   m <- get
   let unvisited = Set.fromList $ Map.keys m
@@ -16,7 +16,7 @@ generateMaze = do
   start <- uniform unvisited'
   generate unvisited' [start] start
 
-generate :: (Monoid w) => Set.Set NodeID -> [NodeID] -> NodeID -> MazeBuilder c w Maze ()
+generate :: Set.Set NodeID -> [NodeID] -> NodeID -> MazeBuilder c Maze ()
 generate unvisited path nid = do
   n <- getNode nid
   nextID <- uniform (connections n)
@@ -27,7 +27,7 @@ generate unvisited path nid = do
     else do
       connectPath unvisited path'
 
-connectPath :: (Monoid w) => Set.Set NodeID -> [NodeID] -> MazeBuilder c w Maze ()
+connectPath :: Set.Set NodeID -> [NodeID] -> MazeBuilder c Maze ()
 connectPath unvisited path = do
   connectAll path
   let unvisited' = deleteAll unvisited path
@@ -35,7 +35,7 @@ connectPath unvisited path = do
     then pure ()
     else newStart unvisited'
 
-newStart :: (Monoid w) => Set.Set NodeID -> MazeBuilder c w Maze ()
+newStart :: Set.Set NodeID -> MazeBuilder c Maze ()
 newStart unvisited = do
   ns <- uniform unvisited
   generate unvisited [ns] ns
@@ -45,7 +45,7 @@ deleteRandom ss = do
   vis <- uniform ss
   return $ Set.delete vis ss
 
-connectAll :: (Monoid w) => [NodeID] -> MazeBuilder c w Maze ()
+connectAll :: [NodeID] -> MazeBuilder c Maze ()
 connectAll ns = traverse_ (\(a, b) -> modify' (connect a b)) toConnect
   where
     toConnect = zip ns (drop 1 ns)

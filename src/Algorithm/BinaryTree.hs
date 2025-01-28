@@ -11,7 +11,7 @@ import           Data.Maybe           (catMaybes)
 import           Maze                 (Edge (Edge), Maze, Node (Node), NodeID,
                                        connect)
 
-generate :: (Monoid w) => NodeID -> MazeBuilder c w Maze ()
+generate :: NodeID -> MazeBuilder c Maze ()
 generate nid = do
   (Node a _ n _ e _)<- getNode nid
   let choices = catMaybes [n, e]
@@ -21,7 +21,7 @@ generate nid = do
     (Edge b _) <- uniform $ catMaybes [n, e]
     modify' $ connect a b
 
-generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze ::  MazeBuilder c Maze ()
 generateMaze = do
   keys <- gets Map.keys
   traverse_ generate keys

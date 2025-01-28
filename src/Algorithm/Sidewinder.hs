@@ -33,7 +33,7 @@ getChoices maze node@(Node i _ n _ e _) = eastProb ++ northProb
     northCells = catMaybes $ northCell : map nodeToNodeWithNorthID (linkedCells maze node)
     northProb = map (flip (,) (0.5 / fromIntegral (length northCells))) northCells
 
-generate :: (Monoid w) => NodeID -> MazeBuilder c w Maze ()
+generate :: NodeID -> MazeBuilder c Maze ()
 generate nid = do
   maze <- get
   node <- getNode nid
@@ -44,7 +44,7 @@ generate nid = do
           choice <- Random.fromList choices
           modify $ uncurry connect choice
 
-generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze :: MazeBuilder c Maze ()
 generateMaze = do
   ks <- gets Map.keys
   traverse_ generate ks

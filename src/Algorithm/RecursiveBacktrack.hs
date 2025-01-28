@@ -8,12 +8,12 @@ import qualified Data.Set             as Set
 import           Maze                 (Edge (Edge), Maze, Node (nid), NodeID,
                                        connect, connectionsWith)
 
-generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze :: MazeBuilder c Maze ()
 generateMaze = do
   start <- nid <$> randomNode
   generate Set.empty [start]
 
-generate :: (Monoid w) => Set.Set NodeID -> [NodeID] -> MazeBuilder c w Maze ()
+generate :: Set.Set NodeID -> [NodeID] -> MazeBuilder c Maze ()
 generate _ [] = pure ()
 generate s ns@(x : xs) = do
   node <- getNode x

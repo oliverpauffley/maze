@@ -11,10 +11,10 @@ import           Maze                 (Edge (..), Maze, MazeNode, Node (..),
                                        NodeID (NodeID), connect,
                                        connectionsWith)
 
-generateMaze :: (Monoid w) => MazeBuilder c w Maze ()
+generateMaze :: MazeBuilder c Maze ()
 generateMaze = randomNode >>= generate Set.empty . nid
 
-generate :: (Monoid w) => Set.Set NodeID -> NodeID -> MazeBuilder c w Maze ()
+generate :: Set.Set NodeID -> NodeID -> MazeBuilder c Maze ()
 generate visited i = do
   maze <- get
   let visited' = Set.insert i visited
@@ -38,7 +38,7 @@ isVisited :: Set.Set NodeID -> (Edge e -> Bool)
 isVisited s (Edge i _) = Set.member i s
 
 -- | finds an unvisited node next to a visited one and connects them
-searchUnvisited :: (Monoid w) => Set.Set NodeID -> MazeBuilder c w Maze NodeID
+searchUnvisited :: Set.Set NodeID -> MazeBuilder c Maze NodeID
 searchUnvisited visited = do
   m <- get
   let pairs = mapMaybe (withVisitedNeighbour visited) (Map.elems m)
@@ -56,6 +56,6 @@ withVisitedNeighbour ss (Node i _ n s e w) = do
   guard $ not (null xs)
   Just (i, head xs)
 
-hunt :: (Monoid w) => Set.Set NodeID -> MazeBuilder c w Maze ()
+hunt :: Set.Set NodeID -> MazeBuilder c Maze ()
 hunt visited = do
   searchUnvisited visited >>= generate visited

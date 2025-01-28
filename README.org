@@ -32,8 +32,6 @@ Could I use the state of the maze during generation in a different way to the st
 Simulate Gloss
 Gloss has a simulate method that looks like it could be used to draw out the maze steps one by one?
 **** TODO
-move solutions to output rather than writer. I'm not sure it's particularly nice to use the writer monad here.
-**** TODO
 Return errors. Could make the return type of generation
 ```Haskell
 Either SomeError ()

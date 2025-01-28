@@ -45,7 +45,7 @@ imageToNode img = [(toNodeID x y, pixelAt img x y) | x <- [0 .. (width - 1)], y 
 blackPixel :: PixelRGB8 -> Bool
 blackPixel (PixelRGB8 r g b) = r + g + b < 30
 
-maskToBlankMaze :: (Monoid w) => MazeBuilder Config w Maze ()
+maskToBlankMaze :: MazeBuilder Config Maze ()
 maskToBlankMaze = do
   Config {..} <- ask
   case mask of

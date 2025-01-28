@@ -1,8 +1,8 @@
 module Maze where
 
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
+import           Data.Maybe      (catMaybes)
 
 -- all mazes are square so width is height too
 type Width = Int
@@ -31,24 +31,24 @@ data Path = Open | Closed
   deriving (Eq, Show)
 
 isOpen :: Path -> Bool
-isOpen Open = True
+isOpen Open   = True
 isOpen Closed = False
 
 data Edge e = Edge
   { nodeID :: NodeID,
-    e :: Path
+    e      :: Path
   }
   deriving (Show, Eq)
 
 type Edges e = (Maybe (Edge e), Maybe (Edge e), Maybe (Edge e), Maybe (Edge e))
 
 data Node a e = Node
-  { nid :: NodeID,
+  { nid   :: NodeID,
     value :: a,
     north :: Maybe (Edge e),
     south :: Maybe (Edge e),
-    east :: Maybe (Edge e),
-    west :: Maybe (Edge e)
+    east  :: Maybe (Edge e),
+    west  :: Maybe (Edge e)
   }
   deriving (Show, Eq)
 
@@ -116,22 +116,22 @@ connect :: NodeID -> NodeID -> Maze -> Maze
 connect a b m = case nodesDirection a b of
   North -> connectN a b m
   South -> connectS a b m
-  East -> connectE a b m
-  West -> connectW a b m
+  East  -> connectE a b m
+  West  -> connectW a b m
 
 -- | remove a node from second nodes adjacency list
 remove :: NodeID -> NodeID -> Maze -> Maze
 remove a b m = case nodesDirection a b of
   North -> removeN a b m
   South -> removeS a b m
-  East -> removeE a b m
-  West -> removeW a b m
+  East  -> removeE a b m
+  West  -> removeW a b m
 
 directionNode :: NodeID -> Direction -> NodeID
 directionNode (NodeID pos) North = NodeID $ pos .+. (0, 1)
 directionNode (NodeID pos) South = NodeID $ pos .+. (0, -1)
-directionNode (NodeID pos) East = NodeID $ pos .+. (1, 0)
-directionNode (NodeID pos) West = NodeID $ pos .+. (-1, 0)
+directionNode (NodeID pos) East  = NodeID $ pos .+. (1, 0)
+directionNode (NodeID pos) West  = NodeID $ pos .+. (-1, 0)
 
 nodesDirection :: NodeID -> NodeID -> Direction
 nodesDirection (NodeID (x1, y1)) (NodeID (x2, y2))
@@ -143,6 +143,7 @@ nodesDirection (NodeID (x1, y1)) (NodeID (x2, y2))
 
 -- | Connect connects two nodes together and returns the
 -- new maze with connected nodes
+-- TODO seems to be some refactoring possible here.
 connectN :: NodeID -> NodeID -> Maze -> Maze
 connectN a b m =
   Map.adjust (\x -> x {north = Just (Edge b Open)}) a $

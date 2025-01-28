@@ -9,7 +9,7 @@ import           Data.Foldable     (traverse_)
 import qualified Data.Map          as Map
 import           Maze              (Edge (nodeID), Maze, NodeID, paths, remove)
 
-killNode :: (Monoid w) => NodeID -> MazeBuilder c w Maze ()
+killNode ::  NodeID -> MazeBuilder c Maze ()
 killNode i = do
   node <- getNode i
   -- clear this node from all neigbours
@@ -18,5 +18,5 @@ killNode i = do
   -- clear from map
   modify' $ Map.delete i
 
-killNodes :: (Monoid w, Traversable t) => t NodeID -> MazeBuilder c w Maze ()
+killNodes :: (Traversable t) => t NodeID -> MazeBuilder c Maze ()
 killNodes = traverse_ killNode

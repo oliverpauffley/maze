@@ -14,7 +14,7 @@ import           DeadEnds                     (getDeadEnds)
 import           Draw                         (drawMaze)
 import           Graphics.Gloss
 import           Image                        (maskToBlankMaze)
-import           Maze                         (newMaze)
+import           Maze                         (Maze, NodeID, newMaze)
 import           Options.Applicative
 import           Param
 import           Solve                        (findLongestRoute)
@@ -46,8 +46,11 @@ run alg = do
       runAlgorithm RecursiveBacktrack.generateMaze cfg
   pure ()
   where
+    runAlgorithm :: MazeBuilder Config Maze () -> Config -> IO ()
     runAlgorithm generate c = do
       let m = newMaze c.mazeSize
-      (deadEnds, maze, solution) <- runBuilder (maskToBlankMaze >> generate >> Solve.findLongestRoute >> getDeadEnds) c m
-      (picture, _, _) <- runBuilder (drawMaze solution deadEnds) c maze
+      (solution, maze) <- runBuilder (maskToBlankMaze >> generate >> Solve.findLongestRoute) c m
+      (deadEnds, maze') <- runBuilder getDeadEnds c maze
+      (picture, _) <- runBuilder (drawMaze solution deadEnds) c maze'
       display (InWindow "Maze" (100, 100) (startWindowPos c.lineLength c.mazeSize)) white picture
+
