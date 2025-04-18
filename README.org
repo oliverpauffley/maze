@@ -36,3 +36,5 @@ Return errors. Could make the return type of generation
 ```Haskell
 Either SomeError ()
 ```
+**** TODO
+move to [[https://diagrams.github.io/][diagrams]]
