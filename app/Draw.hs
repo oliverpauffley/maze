@@ -20,10 +20,9 @@ drawMaze solution deadEnds = do
   Config {..} <- ask
   maze <- get
   mazePicture <- mapM drawNode (mazeToList maze)
-  -- solutionPath <- drawSolution solution
+  solutionPath <- drawSolution solution
   -- deadEndCount <- drawDeadEnds deadEnds
-  -- return $ vsep 10 [solutionPath ||| mazePicture, deadEndCount]
-  return $ position mazePicture
+  return $ position mazePicture <> solutionPath
 
 maxSolutionInMaze :: [NodeID] -> Maze -> Maybe Int
 maxSolutionInMaze xs m = do
@@ -32,9 +31,12 @@ maxSolutionInMaze xs m = do
 
 drawNode (Node (NodeID (x, y)) val n s e w) = do
   debugLabels <- labels val
-  -- colors <- colorNode val
+  colors <- colorNode val
   edges <- drawEdges (n, s, e, w)
-  return (fromIntegral x ^& fromIntegral y, debugLabels `atop` edges)
+  let pos = [p2 (0, 0), p2 (0.5, 0.3), p2 (0.5, 0.5)]
+      ds = [edges,debugLabels, colors]
+      posDs = zip pos ds
+  return (fromIntegral x ^& fromIntegral y, position posDs)
 
 labels :: (Show a) => Maybe a -> MazeBuilder Config m (Diagram B)
 labels Nothing = return mempty
@@ -49,10 +51,10 @@ drawSolution :: [NodeID] -> MazeBuilder Config m (Diagram B)
 drawSolution solution = do
   Config {..} <- ask
   if solve
-    then return $ fromVertices $ map toPoint solution
+    then return $ strokePath (fromVertices $ map toPoint solution) # lc red # lw 2
     else return mempty
   where
-    toPoint (NodeID (x, y)) = p2 (fromIntegral x, fromIntegral y)
+    toPoint (NodeID (x, y)) = p2 (fromIntegral x + 0.5, fromIntegral y + 0.5)
 
 drawEdges :: Edges Maze.Path -> MazeBuilder Config m (Diagram B)
 drawEdges (n, s, e, w) = do
@@ -79,11 +81,11 @@ colorNode ma = do
     else return $ colorN ma mazeSize
   where
     colorN :: Maybe Int -> Int -> Diagram B
-    colorN Nothing _ = square 1 # fc black
-    colorN (Just a) mS = square 1 # fcA (colorMix (fromIntegral mS) (fromIntegral a))
+    colorN Nothing _ = square 1 # fc black lw 0
+    colorN (Just a) mS = square 1 # fcA (colorMix (fromIntegral mS) (fromIntegral a)) lw 0
 
-    colorMix m val = greenyellow `withOpacity` colorScale m val
-    colorScale m val = val - m / m
+    colorMix m val = yellow `withOpacity` colorScale m val
+    colorScale m val = (val - m) / m
 
 drawDeadEnds :: [NodeID] -> MazeBuilder Config s (Diagram B)
 drawDeadEnds ns = do
