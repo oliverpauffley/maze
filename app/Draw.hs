@@ -24,8 +24,6 @@ drawMaze solution deadEnds = do
   -- deadEndCount <- drawDeadEnds deadEnds
   -- return $ vsep 10 [solutionPath ||| mazePicture, deadEndCount]
   return $ position mazePicture
-  where
-    nodePos = p2 . (\(NodeID (x, y)) -> (x, y)) . nid
 
 maxSolutionInMaze :: [NodeID] -> Maze -> Maybe Int
 maxSolutionInMaze xs m = do
@@ -58,13 +56,12 @@ drawSolution solution = do
 
 drawEdges :: Edges Maze.Path -> MazeBuilder Config m (Diagram B)
 drawEdges (n, s, e, w) = do
-  ll <- asks lineLength
   return $
     mconcat
-      [ drawEdge n (map p2 [(0, ll), (ll, ll)]),
-        drawEdge s (map p2 [(0, 0), (ll, 0)]),
-        drawEdge e (map p2 [(ll, 0), (ll, ll)]),
-        drawEdge w (map p2 [(0, 0), (0, ll)])
+      [ drawEdge n (map p2 [(0, 1), (1, 1)]),
+        drawEdge s (map p2 [(0, 0), (1, 0)]),
+        drawEdge e (map p2 [(1, 0), (1, 1)]),
+        drawEdge w (map p2 [(0, 0), (0, 1)])
       ]
       # lwO 10
 
@@ -79,11 +76,11 @@ colorNode ma = do
   Config {..} <- ask
   if not withColor
     then return mempty
-    else return $ colorN lineLength ma mazeSize
+    else return $ colorN ma mazeSize
   where
-    colorN :: Double -> Maybe Int -> Int -> Diagram B
-    colorN ll Nothing _ = square ll # fc black
-    colorN ll (Just a) mS = square ll # fcA (colorMix (fromIntegral mS) (fromIntegral a))
+    colorN :: Maybe Int -> Int -> Diagram B
+    colorN Nothing _ = square 1 # fc black
+    colorN (Just a) mS = square 1 # fcA (colorMix (fromIntegral mS) (fromIntegral a))
 
     colorMix m val = greenyellow `withOpacity` colorScale m val
     colorScale m val = val - m / m

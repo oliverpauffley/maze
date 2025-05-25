@@ -6,7 +6,7 @@ import qualified Data.Map             as Map
 import           Maze                 (Maze, MazeNode, NodeID)
 
 data Config = Config
-  { lineLength    :: Double,
+  { diagramSize   :: Double,
     mazeSize      :: Int,
     solve         :: Bool,
     withColor     :: Bool,
