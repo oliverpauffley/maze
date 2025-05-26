@@ -112,7 +112,6 @@ executable maze
     build-depends:
         base >=4.18.2.1,
         maze,
-        gloss,
         random,
         MonadRandom,
         mtl,
@@ -121,7 +120,8 @@ executable maze
         optparse-applicative,
         JuicyPixels,
         diagrams-lib,
-        diagrams-svg
+        diagrams-svg,
+        colour
 
     -- Directories containing source files.
     hs-source-dirs:   app

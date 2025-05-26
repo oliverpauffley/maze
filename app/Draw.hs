@@ -5,36 +5,38 @@
 
 module Draw where
 
-import           App                  (Config (..), MazeBuilder)
-import           Control.Monad.RWS    (MonadReader (ask), MonadState (get),
-                                       asks)
-import qualified Data.Map             as Map
+import           App                     (Config (..), MazeBuilder)
+import           Control.Monad.Random    (randomIO)
+import           Control.Monad.RWS       (MonadReader (ask), MonadState (get),
+                                          asks)
+import           Data.Colour.SRGB.Linear (rgb)
+import           Data.Foldable           (maximumBy)
+import           Data.Function           (on)
+import qualified Data.Map                as Map
+import           Data.Maybe              (fromJust)
 import           Diagrams.Backend.SVG
-import           Diagrams.Prelude
-import           Maze                 (Edge (Edge), Edges, Maze, Node (Node),
-                                       NodeID (NodeID), Path (Closed, Open),
-                                       mazeToList, nid, value)
+import           Diagrams.Prelude        hiding (value)
+import           Maze                    (Edge (Edge), Edges, Maze, Node (Node),
+                                          NodeID (NodeID), Path (Closed, Open),
+                                          mazeToList, value)
 
 drawMaze :: [NodeID] -> [NodeID] -> MazeBuilder Config Maze (Diagram B)
 drawMaze solution deadEnds = do
   Config {..} <- ask
   maze <- get
-  mazePicture <- mapM drawNode (mazeToList maze)
+  rColour <- getRandomColor
+  mazePicture <- mapM (drawNode rColour) (mazeToList maze)
   solutionPath <- drawSolution solution
   -- deadEndCount <- drawDeadEnds deadEnds
   return $ position mazePicture <> solutionPath
 
-maxSolutionInMaze :: [NodeID] -> Maze -> Maybe Int
-maxSolutionInMaze xs m = do
-  square <- Map.lookup (head xs) m
-  Maze.value square
-
-drawNode (Node (NodeID (x, y)) val n s e w) = do
+drawNode :: Colour Double -> Node (Maybe Int) Maze.Path -> MazeBuilder Config Maze (Point V2 Double, Diagram B)
+drawNode col (Node (NodeID (x, y)) val n s e w) = do
   debugLabels <- labels val
-  colors <- colorNode val
+  colors <- colorNode col val
   edges <- drawEdges (n, s, e, w)
   let pos = [p2 (0, 0), p2 (0.5, 0.3), p2 (0.5, 0.5)]
-      ds = [edges,debugLabels, colors]
+      ds = [edges, debugLabels, colors]
       posDs = zip pos ds
   return (fromIntegral x ^& fromIntegral y, position posDs)
 
@@ -73,19 +75,30 @@ drawEdge (Just (Edge _ e)) p = case e of
   Open   -> mempty
   Closed -> fromVertices p
 
-colorNode :: Maybe Int -> MazeBuilder Config m (Diagram B)
-colorNode ma = do
+colorNode :: Colour Double -> Maybe Int -> MazeBuilder Config Maze (Diagram B)
+colorNode colour ma = do
   Config {..} <- ask
   if not withColor
     then return mempty
-    else return $ colorN ma mazeSize
+    else do
+      mx <- fromIntegral . maxValue <$> get
+      return $ colorN ma mx colour
   where
-    colorN :: Maybe Int -> Int -> Diagram B
-    colorN Nothing _ = square 1 # fc black lw 0
-    colorN (Just a) mS = square 1 # fcA (colorMix (fromIntegral mS) (fromIntegral a)) lw 0
+    colorN :: Maybe Int -> Double -> Colour Double -> Diagram B
+    colorN Nothing _ _ = square 1.01 # fc black lw 0
+    colorN (Just a) mx rCol = square 1.01 # fcA (col rCol ((mx - fromIntegral a) / mx)) lw none
 
-    colorMix m val = yellow `withOpacity` colorScale m val
-    colorScale m val = (val - m) / m
+    col colour v = toAlphaColour $ blend v colour black
+
+    maxValue m =
+      fromJust . value $ maximumBy (compare `on` value) (Map.elems m)
+
+getRandomColor :: MazeBuilder c m (Colour Double)
+getRandomColor = do
+  r <- randomIO
+  g <- randomIO
+  b <- randomIO
+  return $ rgb r g b
 
 drawDeadEnds :: [NodeID] -> MazeBuilder Config s (Diagram B)
 drawDeadEnds ns = do
