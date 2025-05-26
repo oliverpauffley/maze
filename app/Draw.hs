@@ -22,13 +22,12 @@ import           Maze                    (Edge (Edge), Edges, Maze, Node (Node),
 
 drawMaze :: [NodeID] -> [NodeID] -> MazeBuilder Config Maze (Diagram B)
 drawMaze solution deadEnds = do
-  Config {..} <- ask
   maze <- get
   rColour <- getRandomColor
   mazePicture <- mapM (drawNode rColour) (mazeToList maze)
   solutionPath <- drawSolution solution
-  -- deadEndCount <- drawDeadEnds deadEnds
-  return $ position mazePicture <> solutionPath
+  deadEndCount <- drawDeadEnds deadEnds
+  return $ vsep 1 [position mazePicture <> solutionPath, deadEndCount]
 
 drawNode :: Colour Double -> Node (Maybe Int) Maze.Path -> MazeBuilder Config Maze (Point V2 Double, Diagram B)
 drawNode col (Node (NodeID (x, y)) val n s e w) = do
@@ -88,7 +87,7 @@ colorNode colour ma = do
     colorN Nothing _ _ = square 1.01 # fc black lw 0
     colorN (Just a) mx rCol = square 1.01 # fcA (col rCol ((mx - fromIntegral a) / mx)) lw none
 
-    col colour v = toAlphaColour $ blend v colour black
+    col c v = toAlphaColour $ blend v c black
 
     maxValue m =
       fromJust . value $ maximumBy (compare `on` value) (Map.elems m)
