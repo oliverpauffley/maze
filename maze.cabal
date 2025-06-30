@@ -57,6 +57,10 @@ common warnings
 library
     -- Import common warning flags.
     import:           warnings
+    default-extensions:
+            LambdaCase
+            OverloadedStrings
+            StrictData
 
     -- Modules exported by the library.
     exposed-modules: Maze
@@ -70,6 +74,7 @@ library
                      Algorithm.Wilson
                      Algorithm.HuntKill
                      Algorithm.RecursiveBacktrack
+                     Node
 
     -- other-modules:
 
@@ -86,7 +91,9 @@ library
                       transformers,
                       mtl,
                       diagrams-lib,
-                      diagrams-svg
+                      diagrams-svg,
+                      adjunctions,
+                      distributive
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -97,6 +104,10 @@ library
 executable maze
     -- Import common warning flags.
     import:           warnings
+    default-extensions:
+            LambdaCase
+            OverloadedStrings
+            StrictData
 
     -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
@@ -122,6 +133,7 @@ executable maze
         diagrams-lib,
         diagrams-svg,
         colour
+
 
     -- Directories containing source files.
     hs-source-dirs:   app
