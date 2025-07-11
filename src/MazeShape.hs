@@ -124,6 +124,9 @@ connectionsWith p n = filter (p . fst) $ connections n
 openConnections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a Path -> [NodeID]
 openConnections n = (\(e, _) -> e ^. eID) <$> connectionsWith (\e -> (== Open) $ e ^. path) n
 
+closedConnections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a Path -> [(NodeID, Rep d)]
+closedConnections n = (\(e, dir) -> (e ^. eID, dir)) <$> connectionsWith (\e -> (== Closed) $ e ^. path) n
+
 changeNodes ::
     (Representable d, Eq (Rep d), Opposite (Rep d)) =>
     Maze d ->
