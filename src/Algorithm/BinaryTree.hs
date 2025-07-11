@@ -1,27 +1,40 @@
--- | Implements the binary tree algorithm for maze generation.
--- Walks the maze an either cuts a path south or east.
+{-# LANGUAGE FlexibleContexts #-}
+
+{- | Implements the binary tree algorithm for maze generation.
+Walks the maze an either cuts a path south or east.
+-}
 module Algorithm.BinaryTree (generateMaze) where
 
-import           App                  (MazeBuilder, getNode)
-import           Control.Monad.Random
-import           Control.Monad.RWS
-import           Data.Foldable        (traverse_)
-import qualified Data.Map             as Map
-import           Data.Maybe           (catMaybes)
-import           Maze                 (Edge (Edge), Maze, Node (Node), NodeID,
-                                       connect)
+import Control.Monad.RWS
+import Control.Monad.Random
+import Data.Foldable (traverse_)
+import Data.Functor.Rep (Representable (..))
+import qualified Data.Map as Map
+import Data.Maybe (catMaybes)
+import MazeShape (
+    Edge (Edge),
+    Maze,
+    MazeBuilder,
+    Node (Node),
+    NodeID,
+    Opposite,
+    connectNodes,
+    getNode,
+ )
+import MazeShape.Square (FromCardinalDir, northEastDirections)
 
-generate :: NodeID -> MazeBuilder c Maze ()
+generate ::
+    (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => NodeID -> MazeBuilder (Maze d) ()
 generate nid = do
-  (Node a _ n _ e _)<- getNode nid
-  let choices = catMaybes [n, e]
-  if null choices
-    then return ()
-    else do
-    (Edge b _) <- uniform $ catMaybes [n, e]
-    modify' $ connect a b
+    m <- get
+    let choices = catMaybes . northEastDirections $ getNode m nid
+    if null choices
+        then return ()
+        else do
+            (dir, _) <- uniform choices
+            modify' $ connectNodes nid dir
 
-generateMaze ::  MazeBuilder c Maze ()
+generateMaze :: (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => MazeBuilder (Maze d) ()
 generateMaze = do
-  keys <- gets Map.keys
-  traverse_ generate keys
+    keys <- gets Map.keys
+    traverse_ generate keys

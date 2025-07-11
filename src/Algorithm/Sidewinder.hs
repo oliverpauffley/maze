@@ -1,50 +1,55 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
+
 module Algorithm.Sidewinder (generateMaze) where
 
-import           App                  (MazeBuilder, getNode)
-import           Control.Monad.Random as Random (fromList)
-import           Control.Monad.RWS
-import           Data.Foldable        (traverse_)
-import           Data.Map.Strict      as Map (keys, lookup)
-import           Data.Maybe           (catMaybes)
-import           Maze                 (Edge (Edge, nodeID), Maze, MazeNode,
-                                       Node (Node), NodeID, Path (Closed, Open),
-                                       connect)
+import Control.Lens ((^.))
+import Control.Monad.RWS
+import Control.Monad.Random as Random (fromList)
+import Data.Foldable (traverse_)
+import Data.Functor.Rep (Representable (..))
+import Data.Map.Strict as Map (keys, lookup)
+import Data.Maybe (catMaybes)
+import MazeShape
+import MazeShape.Square (CardinalDir (..), FromCardinalDir (fromCardinalDir))
 
 -- | Gets horizontal linked cells to the west
-linkedCells :: Maze -> MazeNode -> [MazeNode]
-linkedCells maze (Node _ _ _ _ _ w) = case w of
-  Just (Edge nid Open) -> case Map.lookup nid maze of
-    Just node -> node : linkedCells maze node
-    Nothing   -> error "linked cells went wrong"
-  Just (Edge _ Closed) -> []
-  Nothing -> []
+linkedCells :: (FromCardinalDir (Rep d), Representable d) => Maze d -> MazeNode d -> [MazeNode d]
+linkedCells maze n =
+    case index (n ^. directions) (fromCardinalDir North) of
+        Just (Edge nid Open) -> case Map.lookup nid maze of
+            Just node -> node : linkedCells maze node
+            Nothing -> error "linked cells went wrong"
+        Just (Edge _ Closed) -> []
+        Nothing -> []
 
-nodeToNodeWithNorthID :: MazeNode -> Maybe (NodeID, NodeID)
-nodeToNodeWithNorthID (Node i _ n _ _ _) = case n of
-  Just (Edge nid _) -> Just (i, nid)
-  Nothing           -> Nothing
+nodeToNodeWithRep :: (FromCardinalDir (Rep d), Representable d) => MazeNode d -> Maybe (NodeID, Rep d)
+nodeToNodeWithRep (Node i _ dirs) = (i, fromCardinalDir North) <$ index dirs (fromCardinalDir North)
 
-getChoices :: Maze -> MazeNode -> [((NodeID, NodeID), Rational)]
-getChoices maze node@(Node i _ n _ e _) = eastProb ++ northProb
+getChoices :: (FromCardinalDir (Rep d), Representable d) => Maze d -> MazeNode d -> [((NodeID, Rep d), Rational)]
+getChoices maze node@(Node i _ dirs) = eastProb ++ northProb
   where
-    eastCell = (,) . nodeID <$> e <*> Just i
-    eastProb = map (flip (,) 0.5) (catMaybes [eastCell])
-    northCell = (,) . nodeID <$> n <*> Just i
-    northCells = catMaybes $ northCell : map nodeToNodeWithNorthID (linkedCells maze node)
-    northProb = map (flip (,) (0.5 / fromIntegral (length northCells))) northCells
+    (e, n) = (index dirs (fromCardinalDir East), index dirs (fromCardinalDir North))
+    eastCell = (,) . const i <$> e <*> Just (fromCardinalDir East)
+    eastProb = map (,0.5) (catMaybes [eastCell])
+    northCell = (,) . const i <$> n <*> Just (fromCardinalDir North)
+    northCells = catMaybes $ northCell : map nodeToNodeWithRep (linkedCells maze node)
+    northProb = map (,0.5 / fromIntegral (length northCells)) northCells
 
-generate :: NodeID -> MazeBuilder c Maze ()
+generate ::
+    (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => NodeID -> MazeBuilder (Maze d) ()
 generate nid = do
-  maze <- get
-  node <- getNode nid
-  let choices = getChoices maze node
-  if null choices
-      then return ()
-      else do
-          choice <- Random.fromList choices
-          modify $ uncurry connect choice
+    maze <- get
+    let
+        node = getNode maze nid
+        choices = getChoices maze node
+    if null choices
+        then return ()
+        else do
+            choice <- Random.fromList choices
+            modify $ uncurry connectNodes choice
 
-generateMaze :: MazeBuilder c Maze ()
+generateMaze :: (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => MazeBuilder (Maze d) ()
 generateMaze = do
-  ks <- gets Map.keys
-  traverse_ generate ks
+    ks <- gets Map.keys
+    traverse_ generate ks
