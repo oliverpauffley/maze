@@ -1,6 +1,6 @@
 #+title: Haskell Maze Generator
 
-[[file:example_images/hunt_and_kill.svg][hunt_and_kill.svg]]
+[[file:example_images/hunt_and_kill.svg]]
 
 Generate mazes using different algorithms in Haskell. Examples can be found in the [[file:example_images/][examples directory]].
 
