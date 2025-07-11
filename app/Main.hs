@@ -13,19 +13,15 @@ import qualified Algorithm.Sidewinder as Sidewinder
 import qualified Algorithm.Wilson as Wilson
 import DeadEnds (getDeadEnds)
 import Diagrams.Backend.SVG (renderSVG)
-import Diagrams.Backend.SVG.CmdLine
 import Diagrams.Prelude hiding (connect)
 import Draw (drawMaze)
 import MazeShape (
     Config (..),
-    Edge (..),
     Maze,
     MazeBuilder,
-    NodeID (..),
-    Path (..),
     runBuilder,
  )
-import MazeShape.Square (Cardinal (Cardinal), newSquareGrid)
+import MazeShape.Square (Cardinal, newSquareGrid)
 import Options.Applicative
 import Param
 import Solve (findLongestRoute)
@@ -63,4 +59,4 @@ run alg = do
         (solution, maze) <- runBuilder (generate >> Solve.findLongestRoute) c m
         (deadEnds, maze') <- runBuilder getDeadEnds c maze
         (picture, _) <- runBuilder (drawMaze solution deadEnds) c maze'
-        renderSVG "maze.svg" (mkWidth c.diagramSize) picture
+        renderSVG (fileName c) (mkWidth c.diagramSize) picture

@@ -33,6 +33,7 @@ config =
         <*> switch (long "color" <> help "color the solution of the maze to see bias")
         <*> switch (long "deadends" <> short 'd' <> help "count the number of dead ends in maze")
         <*> switch (long "debug" <> help "print the Djkstra distances of the maze")
+        <*> strOption (long "file_name" <> short 'n' <> value "maze.svg" <> help "the file name to save the maze to")
 
 -- <*> optional
 --     ( strOption

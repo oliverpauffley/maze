@@ -68,6 +68,7 @@ data Config = Config
     , withColor :: Bool
     , countDeadEnds :: Bool
     , debug :: Bool
+    , fileName :: String
     -- , mask :: Maybe FilePath
     }
 
