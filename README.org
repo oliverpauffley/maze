@@ -1,39 +1,14 @@
 #+title: Haskell Maze Generator
 
-Generate mazes using different algorithms in Haskell.
+[[file:example_images/hunt_and_kill.svg][hunt_and_kill.svg]]
 
-Example Binary Tree:
-#+begin_src
-+---+---+---+---+---+---+---+---+---+
-|       |       |       |           |
-+---+   +---+   +---+   +---+---+   +
-|   |   |   |   |           |       |
-+   +   +   +   +---+---+   +---+   +
-|           |               |       |
-+---+---+   +---+---+---+   +---+   +
-|           |           |   |   |   |
-+---+---+   +---+---+   +   +   +   +
-|       |               |   |       |
-+---+   +---+---+---+   +   +---+   +
-|   |   |   |   |       |       |   |
-+   +   +   +   +---+   +---+   +   +
-|   |       |   |   |   |           |
-+   +---+   +   +   +   +---+---+   +
-|                   |       |   |   |
-+---+---+---+---+   +---+   +   +   +
-|                                   |
-+---+---+---+---+---+---+---+---+---+
-#+end_src
+Generate mazes using different algorithms in Haskell. Examples can be found in the [[file:example_images/][examples directory]].
+
 
 *** Ideas to improve
-**** TODO
-Could I use the state of the maze during generation in a different way to the state during the solve? It seems that most algorithms could use the state as the visited cells and then clear and reuse for the solve. Might make sense to create a new maze within the generate maze steps.
-**** TODO
-Return errors. Could make the return type of generation
-```Haskell
-Either SomeError ()
-```
-**** TODO
-move to [[https://diagrams.github.io/][diagrams]]
-**** TODO
-draw from the state of the monad. This might help with the animation too
+- Could I use the state of the maze during generation in a different way to the state during the solve? It seems that most algorithms could use the state as the visited cells and then clear and reuse for the solve. Might make sense to create a new maze within the generate maze steps.
+- Return errors. Could make the return type of generation
+        ```Haskell
+        Either SomeError ()
+        ```
+- draw from the state of the monad. This might help with the animation too
