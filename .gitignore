@@ -28,4 +28,3 @@ cabal.project.local~
 .ghc.environment.*
 result*
 result
-*.svg
