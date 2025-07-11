@@ -1,35 +1,51 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- | AldousBroder implements a random walk algorithm where we link nodes that are visited on the walk, finishing when all nodes have been visted.
 module Algorithm.AldousBroder (generateMaze) where
 
-import           App                  (MazeBuilder, randomNode)
-import           Control.Monad.Random
-import           Control.Monad.RWS
-import qualified Data.Map             as Map
-import           Data.Maybe           (catMaybes)
-import qualified Data.Set             as Set
-import           Maze                 (Edge (Edge), Maze, Node (Node, nid),
-                                       NodeID (NodeID), Path (Closed, Open),
-                                       connect)
+import Control.Lens (view)
+import Control.Monad.RWS (MonadState (get), modify')
+import Control.Monad.Random (uniform)
+import Data.Functor.Rep (Representable (Rep))
+import qualified Data.Set as Set
+import MazeShape (
+    Edge (Edge),
+    Maze,
+    MazeBuilder,
+    NodeID (NodeID),
+    Opposite,
+    Path (Closed, Open),
+    connectNodes,
+    connections,
+    getNode,
+    nid,
+    randomNode,
+    _nid,
+ )
 
-generate ::  Set.Set NodeID -> NodeID -> MazeBuilder c Maze ()
+generate ::
+    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
+    Set.Set NodeID ->
+    NodeID ->
+    MazeBuilder (Maze d) ()
 generate visited nid = do
-  maze <- get
-  let visited' = Set.insert nid visited
-  if length visited' == length maze
-    then pure ()
-    else case Map.lookup nid maze of
-      (Just (Node _ _ n s e w)) -> do
-        nNode <- uniform $ catMaybes [n, s, e, w]
-        case nNode of
-          (Edge nextID Open) -> generate visited' nextID
-          (Edge nextID Closed) ->
-            if Set.member nextID visited'
-              then generate visited' nextID
-              else do
-                modify' $ connect nid nextID
-                generate visited' nextID
-      Nothing -> pure ()
+    maze <- get
+    let visited' = Set.insert nid visited
+    if length visited' == length maze
+        then pure ()
+        else do
+            let n = getNode maze nid
+            (nNode, dir) <- uniform $ connections n
+            case nNode of
+                (Edge nextID Open) -> generate visited' nextID
+                (Edge nextID Closed) ->
+                    if Set.member nextID visited'
+                        then generate visited' nextID
+                        else do
+                            modify' $ connectNodes nid dir
+                            generate visited' nextID
 
-generateMaze ::  MazeBuilder c Maze ()
+generateMaze ::
+    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) ()
 generateMaze =
-  randomNode >>= generate Set.empty . nid
+    randomNode >>= generate Set.empty . view nid
