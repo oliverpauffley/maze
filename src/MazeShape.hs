@@ -59,7 +59,9 @@ type Maze d = Map NodeID (Node d (Maybe Int) Path)
 
 -- | Partial function to get a node from an ID
 getNode :: Maze d -> NodeID -> Node d (Maybe Int) Path
-getNode m i = fromJust $ Map.lookup i m
+getNode m i = case Map.lookup i m of
+    Just n -> n
+    Nothing -> error $ "can't get node " <> show i
 
 data Config = Config
     { diagramSize :: Double
@@ -201,3 +203,7 @@ toList :: (Representable d, Bounded (Rep d), Enum (Rep d)) => d b -> [(b, Rep d)
 toList r =
     let range = [minBound .. maxBound]
      in map (\dir -> (index r dir, dir)) range
+
+-- | Pointwise addition
+(.+.) :: (Int, Int) -> (Int, Int) -> (Int, Int)
+(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)

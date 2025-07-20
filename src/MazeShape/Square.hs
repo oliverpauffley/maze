@@ -7,17 +7,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
+-- | Mazes with square nodes. Movement is based on the cardinal north, south, east, west directions.
 module MazeShape.Square where
 
 import Data.Foldable (maximumBy)
 
-import Control.Monad.Random (MonadIO, Random, randomIO)
+import Control.Monad (guard)
 import Control.Monad.Reader (ask, asks)
 import Control.Monad.State (get, gets)
-import Data.Colour.SRGB.Linear (rgb)
 import Data.Distributive (Distributive (distribute))
 import Data.Function (on)
 import Data.Functor.Rep (Representable (Rep, index, tabulate))
@@ -30,7 +28,7 @@ import MazeShape
 
 type Width = Int
 
-newSquareGrid :: (Rep d ~ CardinalDir, Representable d) => Int -> Map.Map NodeID (Node d (Maybe a) Path)
+newSquareGrid :: (Rep d ~ CardinalDir, Representable d) => Width -> Map.Map NodeID (Node d (Maybe a) Path)
 newSquareGrid w =
     Map.fromList
         [(NodeID (x, y), mkNode (x, y)) | y <- [0 .. w - 1], x <- [0 .. w - 1]]
@@ -52,10 +50,6 @@ directionNode (NodeID pos) North = NodeID $ pos .+. (0, 1)
 directionNode (NodeID pos) South = NodeID $ pos .+. (0, -1)
 directionNode (NodeID pos) East = NodeID $ pos .+. (1, 0)
 directionNode (NodeID pos) West = NodeID $ pos .+. (-1, 0)
-
--- | Pointwise addition
-(.+.) :: (Int, Int) -> (Int, Int) -> (Int, Int)
-(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
 
 data CardinalDir = North | South | East | West
     deriving (Enum, Eq, Ord, Bounded, Show)
@@ -121,33 +115,34 @@ northEastDirections n = [go North, go East]
     go d = (fromCardinalDir d,) <$> index (n ^. directions) (fromCardinalDir d)
 
 instance DrawMaze Cardinal where
-    drawMaze solution deadEnds = do
-        maze <- get
-        rColour <- getRandomColor
-        mazePicture <- mapM (drawNode rColour) (Map.elems maze)
-        solutionPath <- drawSolution solution
-        deadEndCount <- drawDeadEnds deadEnds
-        return $ vsep 1 [position mazePicture <> solutionPath, deadEndCount]
+    drawEdges (Cardinal n s e w) =
+        [ (n, map p2 [(0, side), (side, side)])
+        , (s, map p2 [(0, 0), (side, 0)])
+        , (e, map p2 [(side, 0), (side, side)])
+        , (w, map p2 [(0, 0), (0, side)])
+        ]
+      where
+        side = 1
 
-drawNode :: Colour Double -> Node Cardinal (Maybe Int) Path -> MazeBuilder (Maze Cardinal) (Point V2 Double, Diagram B)
-drawNode col (Node (NodeID (x, y)) val dirs) = do
-    debugLabels <- labels val
-    colors <- colorNode col val
-    let (n, s, e, w) = (view north dirs, view south dirs, view east dirs, view west dirs)
-    edges <- drawEdges (n, s, e, w)
-    let pos = [p2 (0, 0), p2 (0.5, 0.3), p2 (0.5, 0.5)]
-        ds = [edges, debugLabels, colors]
-        posDs = zip pos ds
-    return (fromIntegral x ^& fromIntegral y, position posDs)
+    colorNode :: Colour Double -> Maybe Int -> MazeBuilder (Maze Cardinal) (Diagram B)
+    colorNode colour ma = do
+        Config{..} <- ask
+        if not withColor
+            then return mempty
+            else do
+                mx <- gets (fromIntegral . maxValue)
+                return $ colorN ma mx colour
+      where
+        colorN :: Maybe Int -> Double -> Colour Double -> Diagram B
+        colorN Nothing _ _ = square 1.01 # fc black lw 0
+        colorN (Just a) mx rCol = square 1.01 # fcA (col rCol ((mx - fromIntegral a) / mx)) lw none
 
-labels :: (Show a) => Maybe a -> MazeBuilder m (Diagram B)
-labels Nothing = return mempty
-labels (Just a) = do
-    debug <- asks debug
-    if not debug
-        then return mempty
-        else
-            return $ scale 0.5 (text (show a))
+        col c v = toAlphaColour $ blend v c black
+
+        maxValue m =
+            fromJust . _value $ maximumBy (compare `on` _value) (Map.elems m)
+
+    nodeToPoint (Node (NodeID (x, y)) _ _) = fromIntegral x ^& fromIntegral y
 
 drawSolution :: [NodeID] -> MazeBuilder m (Diagram B)
 drawSolution solution = do
@@ -157,52 +152,3 @@ drawSolution solution = do
         else return mempty
   where
     toPoint (NodeID (x, y)) = p2 (fromIntegral x + 0.5, fromIntegral y + 0.5)
-
-drawEdges :: (MEdge Path, MEdge Path, MEdge Path, MEdge Path) -> MazeBuilder m (Diagram B)
-drawEdges (n, s, e, w) = do
-    return $
-        mconcat
-            [ drawEdge n (map p2 [(0, 1), (1, 1)])
-            , drawEdge s (map p2 [(0, 0), (1, 0)])
-            , drawEdge e (map p2 [(1, 0), (1, 1)])
-            , drawEdge w (map p2 [(0, 0), (0, 1)])
-            ]
-            # lwO 10
-
-drawEdge :: (TrailLike t, Monoid t) => Maybe (Edge Path) -> [Point (V t) (N t)] -> t
-drawEdge Nothing p = fromVertices p
-drawEdge (Just (Edge _ e)) p = case e of
-    Open -> mempty
-    Closed -> fromVertices p
-
-colorNode :: Colour Double -> Maybe Int -> MazeBuilder (Maze Cardinal) (Diagram B)
-colorNode colour ma = do
-    Config{..} <- ask
-    if not withColor
-        then return mempty
-        else do
-            mx <- gets (fromIntegral . maxValue)
-            return $ colorN ma mx colour
-  where
-    colorN :: Maybe Int -> Double -> Colour Double -> Diagram B
-    colorN Nothing _ _ = square 1.01 # fc black lw 0
-    colorN (Just a) mx rCol = square 1.01 # fcA (col rCol ((mx - fromIntegral a) / mx)) lw none
-
-    col c v = toAlphaColour $ blend v c black
-
-    maxValue m =
-        fromJust . _value $ maximumBy (compare `on` _value) (Map.elems m)
-
-getRandomColor :: (Random a, MonadIO m, Fractional a) => m (Colour a)
-getRandomColor = do
-    r <- randomIO
-    g <- randomIO
-    b <- randomIO
-    return $ rgb r g b
-
-drawDeadEnds :: [NodeID] -> MazeBuilder s (Diagram B)
-drawDeadEnds ns = do
-    Config{..} <- ask
-    if countDeadEnds
-        then return (text ("Dead ends: " <> show (length ns)))
-        else return mempty

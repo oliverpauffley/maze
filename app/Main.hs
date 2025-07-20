@@ -21,7 +21,8 @@ import MazeShape (
     MazeBuilder,
     runBuilder,
  )
-import MazeShape.Square (Cardinal, newSquareGrid)
+import MazeShape.Sigma (Sigma, newHexagonalGrid)
+import MazeShape.Square (Cardinal (Cardinal), newSquareGrid)
 import Options.Applicative
 import Param
 import Solve (findLongestRoute)
