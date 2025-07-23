@@ -75,6 +75,7 @@ library
                      Algorithm.RecursiveBacktrack
                      MazeShape
                      MazeShape.Square
+                     MazeShape.Sigma
                      Draw
 
 
@@ -137,7 +138,9 @@ executable maze
         containers,
         optparse-applicative,
         diagrams-lib,
-        diagrams-svg
+        diagrams-svg,
+        adjunctions,
+        distributive
 
 
     -- Directories containing source files.
