@@ -33,7 +33,7 @@ import MazeShape (
 type Path d = [(NodeID, Rep d)]
 
 generateMaze ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d), Show (Rep d)) => MazeBuilder (Maze d) ()
+    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) ()
 generateMaze = do
     m <- get
     let unvisited = Set.fromList $ Map.keys m
@@ -41,7 +41,7 @@ generateMaze = do
     newStart unvisited'
 
 generate ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d), Show (Rep d)) =>
+    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
     Set.Set NodeID ->
     Path d ->
     NodeID ->
@@ -59,7 +59,7 @@ generate unvisited path nid = do
             connectPath unvisited path'
 
 connectPath ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d), Show (Rep d)) =>
+    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
     Set.Set NodeID ->
     Path d ->
     MazeBuilder (Maze d) ()
@@ -71,7 +71,7 @@ connectPath unvisited path = do
         else newStart unvisited'
 
 newStart ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d), Show (Rep d)) =>
+    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
     Set.Set NodeID ->
     MazeBuilder (Maze d) ()
 newStart unvisited = do
@@ -86,7 +86,7 @@ deleteRandom ss = do
     vis <- uniform ss
     return $ Set.delete vis ss
 
-connectAll :: (Representable d, Opposite (Rep d), Eq (Rep d), Show (Rep d)) => Path d -> MazeBuilder (Maze d) ()
+connectAll :: (Representable d, Opposite (Rep d), Eq (Rep d)) => Path d -> MazeBuilder (Maze d) ()
 connectAll = traverse_ (\(a, b) -> modify' (connectNodes a b))
 
 deleteAll :: (Ord a) => Set.Set a -> [a] -> Set.Set a

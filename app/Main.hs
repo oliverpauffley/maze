@@ -1,28 +1,22 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
 module Main where
 
-import qualified Algorithm.AldousBroder as AldousBroder
-import qualified Algorithm.BinaryTree as BinaryTree
-import qualified Algorithm.HuntKill as HuntKill
-import qualified Algorithm.RecursiveBacktrack as RecursiveBacktrack
-import qualified Algorithm.Sidewinder as Sidewinder
-import qualified Algorithm.Wilson as Wilson
+import Data.Data (Proxy)
 import DeadEnds (getDeadEnds)
 import Diagrams.Backend.SVG (renderSVG)
-import Diagrams.Prelude hiding (connect)
+import Diagrams.Prelude hiding (Path, connect)
 import Draw (drawMaze)
-import MazeShape (
-    Config (..),
-    Maze,
-    MazeBuilder,
-    runBuilder,
- )
-import MazeShape.Sigma (Sigma, newHexagonalGrid)
-import MazeShape.Square (Cardinal (Cardinal), newSquareGrid)
+import GridKind (GridKind (..), SomeGrid (..))
+import MazeShape
 import Options.Applicative
 import Param
 import Solve (findLongestRoute)
@@ -33,31 +27,16 @@ main = do
   where
     opts =
         info
-            (algorithm <**> helper)
+            (config <**> helper)
             (fullDesc <> progDesc "Create and solve random mazes!")
     p = prefs showHelpOnEmpty
 
-run :: Algorithm -> IO ()
-run alg = do
-    case alg of
-        BinaryTree cfg -> do
-            runAlgorithm BinaryTree.generateMaze cfg
-        Sidewinder cfg -> do
-            runAlgorithm Sidewinder.generateMaze cfg
-        AldousBroder cfg -> do
-            runAlgorithm AldousBroder.generateMaze cfg
-        Wilson cfg -> do
-            runAlgorithm Wilson.generateMaze cfg
-        HuntKill cfg -> do
-            runAlgorithm HuntKill.generateMaze cfg
-        RecursiveBacktrack cfg -> do
-            runAlgorithm RecursiveBacktrack.generateMaze cfg
-    pure ()
-  where
-    runAlgorithm :: MazeBuilder (Maze Cardinal) () -> Config -> IO ()
-    runAlgorithm generate c = do
-        let m = newSquareGrid c.mazeSize
-        (solution, maze) <- runBuilder (generate >> Solve.findLongestRoute) c m
-        (deadEnds, maze') <- runBuilder getDeadEnds c maze
-        (picture, _) <- runBuilder (drawMaze solution deadEnds) c maze'
-        renderSVG (fileName c) (mkWidth c.diagramSize) picture
+run :: Config -> IO ()
+run cfg@Config{..} = do
+    case shapeToGrid shape of
+        SomeGrid (_ :: Proxy d) -> do
+            let m = makeGrid @d cfg.mazeSize
+            (solution, maze) <- runBuilder (algorithmFun algorithm >> Solve.findLongestRoute) cfg m
+            (deadEnds, maze') <- runBuilder getDeadEnds cfg maze
+            (picture, _) <- runBuilder (drawMaze solution deadEnds) cfg maze'
+            renderSVG fileName (mkWidth cfg.diagramSize) picture

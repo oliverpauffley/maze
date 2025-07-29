@@ -1,8 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module MazeShape where
 
@@ -12,21 +15,16 @@ import Control.Monad.RWS (RWST (runRWST))
 import Control.Monad.Random (MonadRandom, uniform)
 import Control.Monad.Trans.RWS (gets)
 import Data.Functor.Rep (Representable (..))
-import Data.Map hiding (filter, map, mapMaybe, toList)
+import Data.Map (Map, adjust)
 import qualified Data.Map as Map hiding (mapMaybe)
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Tuple (swap)
 
 newtype NodeID = NodeID (Int, Int)
     deriving (Show, Eq)
 
 instance Ord NodeID where
-    compare (NodeID (x1, y1)) (NodeID (x2, y2))
-        | x1 == x2 && y1 == y2 = EQ
-        | y1 > y2 = GT
-        | y1 < y2 = LT
-        | x1 < x2 = LT
-        | otherwise = GT
+    compare (NodeID a) (NodeID b) = compare a b
 
 data Path = Open | Closed
     deriving (Eq, Show)
@@ -71,8 +69,25 @@ data Config = Config
     , countDeadEnds :: Bool
     , debug :: Bool
     , fileName :: String
-    -- , mask :: Maybe FilePath
+    , -- TODO fix mask
+      -- , mask :: Maybe FilePath
+      algorithm :: Algorithm
+    , shape :: Shape
     }
+
+data Algorithm
+    = BinaryTree
+    | Sidewinder
+    | AldousBroder
+    | Wilson
+    | HuntKill
+    | RecursiveBacktrack
+    deriving (Eq, Show)
+
+data Shape
+    = Square
+    | Hexagon
+    deriving (Eq, Show)
 
 -- | The main monad for the generate of mazes
 type MazeBuilder s = RWST Config () s IO
@@ -83,6 +98,9 @@ runBuilder app c s = do
     (a, s', _) <- runRWST app c s
     return (a, s')
 
+{- | A maze node with a set of possible connections and value. Each node has a node id that is used as the key to select the node. The directions are Maybe as on the edges or after masking has
+been applied their may not be a connection.
+-}
 data Node d a e = Node
     { _nid :: NodeID
     , _value :: a
@@ -96,18 +114,14 @@ type MazeNode d = Node d (Maybe Int) Path
 randomNode :: MazeBuilder (Maze d) (Node d (Maybe Int) Path)
 randomNode = uniform =<< gets Map.elems
 
--- | not sure if I need this?
-updateNodes :: (Representable d) => Node d a e -> (d (MEdge e) -> Rep d -> MEdge e) -> Node d a e
-updateNodes (Node i val dirs) f = Node i val (tabulate $ f dirs)
-
-{- | setter takes an indesx within a representable functor and updates that index's value
+{- | setter takes an index within a representable functor and updates that index's value
  whilst keeping the rest the same.
 -}
 setter :: (Representable d, Eq (Rep d)) => d a -> Rep d -> a -> d a
-setter f rep val =
+setter f updRep val =
     tabulate setter'
   where
-    setter' newRep = if newRep == rep then val else index f newRep
+    setter' rep = if rep == updRep then val else index f rep
 
 {- | A set of directions where there is the concept of a reverse direction
  opposite (opposite d) == d
@@ -117,7 +131,7 @@ class Opposite a where
 
 -- | list all connections from current node.
 connections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a e -> [(Edge e, Rep d)]
-connections (Node _ _ dirs) = mapMaybe (\(medge, dir) -> swap . (dir,) <$> medge) $ toList dirs
+connections (Node _ _ dirs) = mapMaybe (\(medge, dir) -> (,dir) <$> medge) $ toList dirs
 
 -- | list all nodes and filter with filtering function
 connectionsWith ::
@@ -130,6 +144,7 @@ openConnections n = (\(e, _) -> e ^. eID) <$> connectionsWith (\e -> (== Open) $
 closedConnections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a Path -> [(NodeID, Rep d)]
 closedConnections n = (\(e, dir) -> (e ^. eID, dir)) <$> connectionsWith (\e -> (== Closed) $ e ^. path) n
 
+-- | given a node, id and direction; apply a function on that node and dir and it's opposite
 changeNodes ::
     (Representable d, Eq (Rep d), Opposite (Rep d)) =>
     Maze d ->
@@ -137,16 +152,15 @@ changeNodes ::
     Rep d ->
     (Maze d -> NodeID -> Rep d -> Maze d) ->
     Maze d
-changeNodes m id dir fun = fun (fun m id dir) id2 (opposite dir)
+changeNodes m id dir f = f (f m id dir) id2 (opposite dir)
   where
-    -- lookup the node we are connecting from
+    -- lookup the node directions from where are connecting from
     nodeDirs = view directions <$> Map.lookup id m
     -- find the node we are connecting to
-    -- TODO better error handling?
     idNode Nothing = error "could not find node"
     idNode (Just dirs) = case index dirs dir of
         Nothing -> error "could not connect node, no node"
-        Just edge -> _eID edge
+        Just edge -> edge ^. eID
 
     id2 = idNode nodeDirs
 
@@ -199,6 +213,7 @@ randomDirectionWith n p =
         | p e = (dir, e) : filterEdge p xs
         | otherwise = filterEdge p xs
 
+-- | turn a representable functor into a list of each part of the functor with it's index value
 toList :: (Representable d, Bounded (Rep d), Enum (Rep d)) => d b -> [(b, Rep d)]
 toList r =
     let range = [minBound .. maxBound]
@@ -207,3 +222,5 @@ toList r =
 -- | Pointwise addition
 (.+.) :: (Int, Int) -> (Int, Int) -> (Int, Int)
 (x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
+
+infixl 6 .+.

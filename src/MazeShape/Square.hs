@@ -6,7 +6,9 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Mazes with square nodes. Movement is based on the cardinal north, south, east, west directions.
 module MazeShape.Square where
@@ -24,11 +26,13 @@ import Data.Maybe (fromJust)
 import Diagrams.Backend.SVG (B)
 import Diagrams.Prelude hiding (Path, index, value)
 import Draw
+import GridKind
 import MazeShape
 
-type Width = Int
+instance ((Rep Cardinal ~ CardinalDir), Representable Cardinal) => GridKind Cardinal where
+    makeGrid = newSquareGrid
 
-newSquareGrid :: (Rep d ~ CardinalDir, Representable d) => Width -> Map.Map NodeID (Node d (Maybe a) Path)
+newSquareGrid :: (Rep d ~ CardinalDir, Representable d) => Int -> Map.Map NodeID (Node d (Maybe a) Path)
 newSquareGrid w =
     Map.fromList
         [(NodeID (x, y), mkNode (x, y)) | y <- [0 .. w - 1], x <- [0 .. w - 1]]
@@ -51,18 +55,12 @@ directionNode (NodeID pos) South = NodeID $ pos .+. (0, -1)
 directionNode (NodeID pos) East = NodeID $ pos .+. (1, 0)
 directionNode (NodeID pos) West = NodeID $ pos .+. (-1, 0)
 
-data CardinalDir = North | South | East | West
-    deriving (Enum, Eq, Ord, Bounded, Show)
-
 instance Opposite CardinalDir where
     opposite :: CardinalDir -> CardinalDir
     opposite North = South
     opposite South = North
     opposite East = West
     opposite West = East
-
-class FromCardinalDir a where
-    fromCardinalDir :: CardinalDir -> a
 
 instance FromCardinalDir CardinalDir where
     fromCardinalDir = id
@@ -93,13 +91,13 @@ instance Representable Cardinal where
     type Rep Cardinal = CardinalDir
 
     index :: Cardinal a -> (Rep Cardinal -> a)
-    index (Cardinal n _ _ _) North = n
-    index (Cardinal _ e _ _) East = e
-    index (Cardinal _ _ s _) South = s
-    index (Cardinal _ _ _ w) West = w
+    index c North = c ^. north
+    index c East = c ^. east
+    index c South = c ^. south
+    index c West = c ^. west
 
     tabulate :: (Rep Cardinal -> a) -> Cardinal a
-    tabulate b = Cardinal (b North) (b East) (b South) (b West)
+    tabulate c = Cardinal (c North) (c East) (c South) (c West)
 
 instance Applicative Cardinal where
     pure :: a -> Cardinal a
@@ -115,14 +113,16 @@ northEastDirections n = [go North, go East]
     go d = (fromCardinalDir d,) <$> index (n ^. directions) (fromCardinalDir d)
 
 instance DrawMaze Cardinal where
-    drawEdges (Cardinal n s e w) =
-        [ (n, map p2 [(0, side), (side, side)])
-        , (s, map p2 [(0, 0), (side, 0)])
-        , (e, map p2 [(side, 0), (side, side)])
-        , (w, map p2 [(0, 0), (0, side)])
+    drawEdges (Cardinal n e s w) =
+        [ (n, map p2 [(mHalfS, halfS), (halfS, halfS)])
+        , (s, map p2 [(mHalfS, mHalfS), (halfS, mHalfS)])
+        , (e, map p2 [(halfS, mHalfS), (halfS, halfS)])
+        , (w, map p2 [(mHalfS, mHalfS), (mHalfS, halfS)])
         ]
       where
-        side = 1
+        side = 1.0
+        halfS = side / 2
+        mHalfS = -(side / 2)
 
     colorNode :: Colour Double -> Maybe Int -> MazeBuilder (Maze Cardinal) (Diagram B)
     colorNode colour ma = do
@@ -134,21 +134,12 @@ instance DrawMaze Cardinal where
                 return $ colorN ma mx colour
       where
         colorN :: Maybe Int -> Double -> Colour Double -> Diagram B
-        colorN Nothing _ _ = square 1.01 # fc black lw 0
-        colorN (Just a) mx rCol = square 1.01 # fcA (col rCol ((mx - fromIntegral a) / mx)) lw none
+        colorN Nothing _ _ = square 1 # fc grey lw 0
+        colorN (Just a) mx rCol = square 1 # fcA (col rCol ((mx - fromIntegral a) / mx)) lw none
 
-        col c v = toAlphaColour $ blend v c black
+        col c v = toAlphaColour $ blend v c grey
 
         maxValue m =
             fromJust . _value $ maximumBy (compare `on` _value) (Map.elems m)
 
     nodeToPoint (Node (NodeID (x, y)) _ _) = fromIntegral x ^& fromIntegral y
-
-drawSolution :: [NodeID] -> MazeBuilder m (Diagram B)
-drawSolution solution = do
-    Config{..} <- ask
-    if solve
-        then return $ strokePath (fromVertices $ map toPoint solution) # lc red # lw 2
-        else return mempty
-  where
-    toPoint (NodeID (x, y)) = p2 (fromIntegral x + 0.5, fromIntegral y + 0.5)

@@ -10,6 +10,7 @@ import Control.Monad.Reader (MonadReader (ask), asks)
 import Control.Monad.State (get)
 import Data.Colour.SRGB.Linear (rgb)
 import qualified Data.Map as Map
+import Debug.Trace (traceShow)
 import Diagrams.Backend.SVG
 import Diagrams.Prelude hiding (Path, value)
 import MazeShape (
@@ -18,9 +19,8 @@ import MazeShape (
     MEdge,
     Maze,
     MazeBuilder,
-    MazeNode,
-    Node (Node),
-    NodeID (NodeID),
+    Node,
+    NodeID,
     Path (Closed, Open),
     directions,
     getNode,
@@ -38,7 +38,7 @@ class DrawMaze a where
         mazePicture <- mapM (drawNode rColour) (Map.elems maze)
         solutionPath <- drawSolution (getNodes solution maze)
         deadEndCount <- drawDeadEnds deadEnds
-        return $ vsep 1 [position mazePicture <> solutionPath, deadEndCount]
+        return $ vsep 1 [solutionPath <> position mazePicture, deadEndCount] # frame 0.3
 
     nodeToPoint :: Node a v p -> Point V2 Double
     drawEdges :: a (MEdge Path) -> [(MEdge Path, [Point V2 Double])]
@@ -51,9 +51,8 @@ drawNode col node = do
     colors <- colorNode col (node ^. value)
     let es = edges (node ^. directions)
         nodePos = nodeToPoint node
-        pos = [p2 (0, 0), p2 (0.5, 0.3), p2 (0.5, 0.5)]
         ds = [es, debugLabels, colors]
-        posDs = zip pos ds
+        posDs = zip (repeat (p2 (0.0, 0.0))) ds
     return (nodePos, position posDs)
 
 getNodes :: [NodeID] -> Maze d -> [Node d (Maybe Int) Path]
@@ -63,10 +62,14 @@ drawSolution :: (DrawMaze d) => [Node d (Maybe Int) Path] -> MazeBuilder m (Diag
 drawSolution solution = do
     Config{..} <- ask
     if solve
-        then return $ strokePath (fromVertices $ map toPoint solution) # lc red # lw 2
+        then
+            return $
+                strokePath (fromVertices $ map nodeToPoint solution)
+                    # lc red
+                    # lw 2
+                    # lineCap LineCapRound
+                    # lineJoin LineJoinRound
         else return mempty
-  where
-    toPoint n = nodeToPoint n + 0.5 ^& 0.5
 
 drawDeadEnds :: [NodeID] -> MazeBuilder s (Diagram B)
 drawDeadEnds ns = do
@@ -93,7 +96,7 @@ labels (Just a) = do
 
 -- | generically draw all edges
 edges :: (DrawMaze d) => d (MEdge Path) -> Diagram B
-edges = mconcat . map (uncurry drawEdge) . drawEdges # lwO 10
+edges = mconcat . map (uncurry drawEdge) . drawEdges # lwO 10 # lineCap LineCapRound # lineJoin LineJoinRound
 
 drawEdge :: (TrailLike t, Monoid t) => Maybe (Edge Path) -> [Point (V t) (N t)] -> t
 drawEdge Nothing p = fromVertices p

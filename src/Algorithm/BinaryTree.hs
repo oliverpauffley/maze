@@ -11,6 +11,7 @@ import Data.Foldable (traverse_)
 import Data.Functor.Rep (Representable (..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
+import GridKind (FromCardinalDir)
 import MazeShape (
     Edge (Edge),
     Maze,
@@ -21,7 +22,7 @@ import MazeShape (
     connectNodes,
     getNode,
  )
-import MazeShape.Square (FromCardinalDir, northEastDirections)
+import MazeShape.Square (northEastDirections)
 
 generate ::
     (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => NodeID -> MazeBuilder (Maze d) ()

@@ -10,8 +10,8 @@ import Data.Foldable (traverse_)
 import Data.Functor.Rep (Representable (..))
 import Data.Map.Strict as Map (keys, lookup)
 import Data.Maybe (catMaybes)
+import GridKind (CardinalDir (..), FromCardinalDir (..))
 import MazeShape
-import MazeShape.Square (CardinalDir (..), FromCardinalDir (fromCardinalDir))
 
 -- | Gets horizontal linked cells to the west
 linkedCells :: (FromCardinalDir (Rep d), Representable d) => Maze d -> MazeNode d -> [MazeNode d]

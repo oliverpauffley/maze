@@ -77,6 +77,8 @@ library
                      MazeShape.Square
                      MazeShape.Sigma
                      Draw
+                     Param
+                     GridKind
 
 
     -- other-modules:
@@ -101,7 +103,8 @@ library
                       JuicyPixels,
                       diagrams-lib,
                       diagrams-svg,
-                      colour
+                      colour,
+                      optparse-applicative,
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -122,7 +125,6 @@ executable maze
 
     -- Modules included in this executable, other than Main.
     other-modules:
-                    Param
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
