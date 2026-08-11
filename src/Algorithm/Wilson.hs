@@ -9,60 +9,48 @@ import Control.Monad.RWS (
  )
 import Control.Monad.Random (uniform)
 import Data.Foldable (traverse_)
-import Data.Functor.Rep (Representable (..))
-import qualified Data.Map as Map
 import qualified Data.Set as Set
-import MazeShape (
+import MazeShapeV2 (
+    GridShape (Direction),
     Maze,
     MazeBuilder,
-    Node,
-    NodeID,
-    Opposite,
-    closedConnections,
-    connectNodes,
-    connections,
-    connectionsWith,
-    directions,
-    eID,
-    getNode,
-    nid,
-    toList,
+    allCoords,
+    connectEdge,
+    getClosedEdges,
+    mazeNodes,
  )
 
 -- | a path of connections that we want to make.
-type Path d = [(NodeID, Rep d)]
+type Path coord = [(coord, coord)]
 
-generateMaze ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) ()
+generateMaze :: (GridShape coord, Ord coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
     m <- get
-    let unvisited = Set.fromList $ Map.keys m
+    let unvisited = Set.fromList $ allCoords m
     unvisited' <- liftIO $ deleteRandom unvisited
     newStart unvisited'
 
 generate ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
-    Set.Set NodeID ->
-    Path d ->
-    NodeID ->
-    MazeBuilder (Maze d) ()
-generate unvisited path nid = do
+    (GridShape coord, Ord coord) =>
+    Set.Set coord ->
+    Path coord ->
+    coord ->
+    MazeBuilder (Maze coord a) ()
+generate unvisited path c = do
     m <- get
-    let n = getNode m nid
-    (nextID, dir) <- uniform (closedConnections n)
-    let next = (nid, dir)
-    let path' = updatePath path next
-    if Set.member nextID unvisited
+    nextCoord <- uniform (getClosedEdges c m)
+    let path' = updatePath path (c, nextCoord)
+    if Set.member nextCoord unvisited
         then
-            generate unvisited path' nextID
+            generate unvisited path' nextCoord
         else do
             connectPath unvisited path'
 
 connectPath ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
-    Set.Set NodeID ->
-    Path d ->
-    MazeBuilder (Maze d) ()
+    (GridShape coord, Ord coord) =>
+    Set.Set coord ->
+    Path coord ->
+    MazeBuilder (Maze coord a) ()
 connectPath unvisited path = do
     connectAll path
     let unvisited' = deleteAll unvisited (map fst path)
@@ -71,23 +59,24 @@ connectPath unvisited path = do
         else newStart unvisited'
 
 newStart ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
-    Set.Set NodeID ->
-    MazeBuilder (Maze d) ()
+    (GridShape coord, Ord coord) =>
+    Set.Set coord ->
+    MazeBuilder (Maze coord a) ()
 newStart unvisited = do
     m <- get
-    nextID <- uniform unvisited
-    let node = getNode m nextID
-    (_, dir) <- uniform $ closedConnections node
-    generate unvisited [(nextID, dir)] nextID
+    nextCoord <- uniform unvisited
+    nextCoord' <- uniform $ getClosedEdges nextCoord m
+    let nextPath = [(nextCoord, nextCoord')]
+    generate unvisited nextPath nextCoord
 
 deleteRandom :: (Ord a) => Set.Set a -> IO (Set.Set a)
 deleteRandom ss = do
     vis <- uniform ss
     return $ Set.delete vis ss
 
-connectAll :: (Representable d, Opposite (Rep d), Eq (Rep d)) => Path d -> MazeBuilder (Maze d) ()
-connectAll = traverse_ (\(a, b) -> modify' (connectNodes a b))
+connectAll ::
+    (GridShape coord, Ord coord) => Path coord -> MazeBuilder (Maze coord a) ()
+connectAll = traverse_ (\(a, b) -> modify' (connectEdge a b))
 
 deleteAll :: (Ord a) => Set.Set a -> [a] -> Set.Set a
 deleteAll = foldr Set.delete
@@ -98,8 +87,8 @@ deleteAll = foldr Set.delete
 -- [(0,0)]
 
 -- >>> updatePath [(0,0), (1,0), (1,1), (2,1), (2,2), (1,2)] (1,1)
--- [(0,0),(1,1)]
-updatePath :: (Eq a) => [(a, b)] -> (a, b) -> [(a, b)]
-updatePath xs n@(a, _) = ys ++ [n]
+-- [(0,0),(1,0),(1,1)]
+updatePath :: (Eq a) => [(a, a)] -> (a, a) -> [(a, a)]
+updatePath xs next = ys ++ [next]
   where
-    (ys, _) = break ((== a) . fst) xs
+    (ys, _) = break (== next) xs

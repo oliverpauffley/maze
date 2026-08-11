@@ -1,0 +1,189 @@
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
+
+module MazeShapeV2 (
+    GridShape (..),
+    Maze (..),
+    MazeBuilder,
+    NorthEastDirection,
+    Direction,
+    connectEdge,
+    getNorthEastNeighbors,
+    mazeNodes,
+    mazeEdges,
+    EdgeState (..),
+    getEdgeState,
+    getNorth,
+    allCoords,
+    randomNode,
+    getEdgesWith,
+    getEdges,
+    getClosedEdges,
+    NodeShape (..),
+    edges,
+    (.+.),
+)
+where
+
+import Control.Lens
+import Control.Monad.Random (MonadRandom, uniform)
+import Control.Monad.Reader (ReaderT (runReaderT))
+import Control.Monad.State (MonadState, StateT (runStateT), gets)
+import Data.Map (Map)
+import Data.Maybe (catMaybes)
+import Diagrams (Path, Point, V2)
+import Diagrams.Located (Located)
+import MazeShape (Config)
+
+data NodeShape direction = NodeShape
+    { _center :: Point V2 Double
+    , _edges :: Map direction [Located (Path V2 Double)]
+    {- ^ the edges are the possible edges that could be drawn
+     we don't know if these should be drawn until we check the mazeEdges field
+    -}
+    }
+
+makeLenses ''NodeShape
+
+class GridShape coord where
+    data Direction coord
+
+    neighbors :: coord -> [coord]
+    --  if the direction is bounded we can provide a default implementation
+    default neighbors ::
+        (Bounded (Direction coord), Enum (Direction coord)) =>
+        coord -> [coord]
+    neighbors c = catMaybes [neighbor c d | d <- [minBound .. maxBound]]
+
+    neighbor :: coord -> Direction coord -> Maybe coord
+
+    -- | convert a coordinate to a point in 2D space.
+    toShape :: coord -> NodeShape (Direction coord)
+
+class NorthEastDirection d where
+    northDir :: d
+    eastDir :: d
+
+getNorth ::
+    (GridShape c, NorthEastDirection (Direction c)) =>
+    c -> Maybe c
+getNorth c = neighbor c northDir
+
+getEast ::
+    (GridShape c, NorthEastDirection (Direction c)) =>
+    c -> Maybe c
+getEast c = neighbor c eastDir
+
+getNorthEastNeighbors ::
+    (GridShape c, NorthEastDirection (Direction c)) =>
+    c -> (Maybe c, Maybe c)
+getNorthEastNeighbors c = (getNorth c, getEast c)
+
+newtype Square = Square (Int, Int)
+    deriving (Show, Eq, Ord)
+
+instance GridShape Square where
+    neighbors :: Square -> [Square]
+    neighbors (Square (x, y)) = [Square (x + a, y + b) | a <- [-1, 0, 1], b <- [-1, 0, 1], a /= b]
+    neighbor :: Square -> Direction Square -> Maybe Square
+    neighbor = undefined
+    toShape :: Square -> NodeShape (Direction Square)
+    toShape = undefined
+
+data EdgeState = Open | Closed
+    deriving (Show, Eq)
+
+isOpen :: EdgeState -> Bool
+isOpen Open = True
+isOpen _ = False
+
+isClosed :: EdgeState -> Bool
+isClosed = not . isOpen
+
+data Maze coord nodeData = Maze
+    { _mazeNodes :: Map coord nodeData
+    , -- Edges are stored as a Map of coordinate pairs to their state.
+      _mazeEdges :: Map (coord, coord) EdgeState
+    }
+    deriving (Show, Eq)
+
+makeLenses ''Maze
+
+allCoords :: Maze coord nodeData -> [coord]
+allCoords maze = maze ^.. mazeNodes . ifolded . asIndex
+
+randomNode :: (MonadState (Maze coord a) m, MonadRandom m) => m coord
+randomNode = uniform =<< gets allCoords
+
+instance Functor (Maze coord) where
+    fmap :: (a -> b) -> Maze coord a -> Maze coord b
+    fmap f (Maze ns es) = Maze (f <$> ns) es
+
+{- | Standardizes an edge pair so (A, B) and (B, A) result in the same key.
+all connections/data is stored with smallest value first.
+-}
+edgeKey :: (Ord coord) => coord -> coord -> (coord, coord)
+edgeKey c1 c2
+    | c1 <= c2 = (c1, c2)
+    | otherwise = (c2, c1)
+
+-- >>> getEdgeState 1 2 (Maze Map.empty (Map.fromList [((1,2), Closed)]))
+-- Just Closed
+getEdgeState :: (Ord coord) => coord -> coord -> Maze coord a -> Maybe EdgeState
+getEdgeState u v maze =
+    maze ^. mazeEdges . at (edgeKey u v)
+
+-- >>> setEdgeState 1 2 Open (Maze Map.empty (Map.fromList [((1,2), Closed)]))
+-- Maze {_mazeNodes = fromList [], _mazeEdges = fromList [((1,2),Open)]}
+setEdgeState :: (Ord coord) => coord -> coord -> EdgeState -> Maze coord nodeData -> Maze coord nodeData
+setEdgeState u v state maze =
+    maze & mazeEdges . at (edgeKey u v) ?~ state
+
+connectEdge :: (Ord coord) => coord -> coord -> Maze coord a -> Maze coord a
+connectEdge u v maze = setEdgeState u v Open maze
+
+getEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [(coord, EdgeState)]
+getEdges c maze = getEdges' c maze (const True)
+
+getEdges' ::
+    (Ord coord, GridShape coord) => coord -> Maze coord a -> (EdgeState -> Bool) -> [(coord, EdgeState)]
+getEdges' c maze f =
+    let
+        ns = neighbors c
+     in
+        foldl' go [] ns
+  where
+    go acc c' = case getEdgeState c c' maze of
+        Just e | f e -> (c', e) : acc
+        _otherwise -> acc
+
+getEdgesWith :: (Ord coord, GridShape coord) => coord -> (coord -> Bool) -> Maze coord a -> [coord]
+getEdgesWith c f maze = filter f $ map fst $ getEdges' c maze (const True)
+
+getOpenEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [coord]
+getOpenEdges c maze = fst <$> getEdges' c maze isOpen
+
+getClosedEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [coord]
+getClosedEdges c maze = fst <$> getEdges' c maze isClosed
+
+-- | The main monad for the generate of mazes
+type MazeBuilder s a = ReaderT Config (StateT s IO) a
+
+-- | Run the builder to produce a maze
+runBuilder :: MazeBuilder state a -> Config -> state -> IO (a, state)
+runBuilder app c s = do
+    (a, s') <- runStateT (runReaderT app c) s
+    return (a, s')
+
+{- | Pointwise addition
+TODO put this somewhere better
+TODO make a type that implements Num?
+-}
+(.+.) :: (Num a) => (a, a) -> (a, a) -> (a, a)
+(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
+
+infixl 6 .+.

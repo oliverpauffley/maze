@@ -5,37 +5,34 @@ Walks the maze an either cuts a path south or east.
 -}
 module Algorithm.BinaryTree (generateMaze) where
 
+import Control.Lens
 import Control.Monad.RWS
 import Control.Monad.Random
 import Data.Foldable (traverse_)
-import Data.Functor.Rep (Representable (..))
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
-import GridKind (FromCardinalDir)
-import MazeShape (
-    Edge (Edge),
+import MazeShapeV2 (
+    GridShape (..),
     Maze,
     MazeBuilder,
-    Node (Node),
-    NodeID,
-    Opposite,
-    connectNodes,
-    getNode,
+    NorthEastDirection,
+    allCoords,
+    connectEdge,
+    getNorthEastNeighbors,
  )
-import MazeShape.Square (northEastDirections)
 
 generate ::
-    (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => NodeID -> MazeBuilder (Maze d) ()
-generate nid = do
-    m <- get
-    let choices = catMaybes . northEastDirections $ getNode m nid
+    (GridShape coord, NorthEastDirection (Direction coord), Ord coord) => coord -> MazeBuilder (Maze coord a) ()
+generate c = do
+    let (n, e) = getNorthEastNeighbors c
+    let choices = catMaybes $ [n, e]
     if null choices
         then return ()
         else do
-            (dir, _) <- uniform choices
-            modify' $ connectNodes nid dir
+            new <- uniform choices
+            modify' $ connectEdge c new
 
-generateMaze :: (FromCardinalDir (Rep d), Representable d, Eq (Rep d), Opposite (Rep d)) => MazeBuilder (Maze d) ()
+generateMaze :: (GridShape coord, NorthEastDirection (Direction coord), Ord coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
-    keys <- gets Map.keys
+    keys <- gets allCoords
     traverse_ generate keys

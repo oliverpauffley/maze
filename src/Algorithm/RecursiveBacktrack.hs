@@ -3,46 +3,35 @@
 -- | Randomly walks on unvisited nodes. When it reaches a node surrounded by visited cells it backtracks and tries again
 module Algorithm.RecursiveBacktrack (generateMaze) where
 
-import Control.Lens (view)
-import Control.Lens.Getter ((^.))
-import Control.Monad.RWS
+import Control.Monad.RWS (MonadState (get), modify')
 import Control.Monad.Random (uniform)
-import Data.Functor.Rep (Representable (..))
 import qualified Data.Set as Set
-import MazeShape (
-    Edge (Edge),
+import MazeShapeV2 (
+    GridShape,
     Maze,
     MazeBuilder,
-    NodeID,
-    Opposite,
-    connectNodes,
-    connectionsWith,
-    eID,
-    getNode,
-    nid,
+    connectEdge,
+    getEdgesWith,
     randomNode,
  )
 
-generateMaze ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) ()
+generateMaze :: (GridShape coord, Ord coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
-    start <- view nid <$> randomNode
+    start <- randomNode
     generate Set.empty [start]
 
 generate ::
-    (Representable d, Opposite (Rep d), Eq (Rep d), Bounded (Rep d), Enum (Rep d)) =>
-    Set.Set NodeID ->
-    [NodeID] ->
-    MazeBuilder (Maze d) ()
+    (GridShape coord, Ord coord) =>
+    Set.Set coord -> [coord] -> MazeBuilder (Maze coord a) ()
 generate _ [] = pure ()
 generate s ns@(x : xs) = do
     m <- get
-    let node = getNode m x
+    let
         s' = Set.insert x s
-        choices = connectionsWith (\e -> Set.notMember (e ^. eID) s) node
+        choices = getEdgesWith x (\e -> Set.notMember e s) m
     if null choices
         then generate s' xs
         else do
-            (next, dir) <- uniform choices
-            modify' $ connectNodes x dir
-            generate s' ((next ^. eID) : ns)
+            next <- uniform choices
+            modify' $ connectEdge x next
+            generate s' (next : ns)

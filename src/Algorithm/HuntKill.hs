@@ -3,92 +3,69 @@
 -- | Implements the hunt and kill algorithm where we avoid walking on nodes we have already visited and search or "hunt" for unvisited nodes once we get trapped.
 module Algorithm.HuntKill where
 
-import Control.Lens ((^.))
 import Control.Monad.RWS (MonadState (get), modify')
 import Control.Monad.Random (guard, uniform)
-import Control.Monad.Representable.Reader (Representable)
-import Data.Functor.Rep (Representable (..))
-import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-import MazeShape (
-    Edge (..),
+import MazeShapeV2 (
+    GridShape,
     Maze,
     MazeBuilder,
-    MazeNode,
-    Node (..),
-    NodeID (NodeID),
-    Opposite,
-    connectNodes,
-    connections,
-    connectionsWith,
-    directions,
-    eID,
-    getNode,
-    nid,
+    allCoords,
+    connectEdge,
+    getEdgesWith,
     randomNode,
  )
 
-generateMaze ::
-    (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d)) => MazeBuilder (Maze d) ()
-generateMaze = randomNode >>= generate Set.empty . _nid
+generateMaze :: (GridShape coord, Ord coord) => MazeBuilder (Maze coord a) ()
+generateMaze = randomNode >>= generate Set.empty
 
 generate ::
-    (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d)) =>
-    Set.Set NodeID ->
-    NodeID ->
-    MazeBuilder (Maze d) ()
-generate visited i = do
+    (GridShape coord, Ord coord) =>
+    Set.Set coord -> coord -> MazeBuilder (Maze coord a) ()
+generate visited c = do
     maze <- get
-    let visited' = Set.insert i visited
-    if length visited' == length maze
+    let visited' = Set.insert c visited
+    if length visited' == length (allCoords maze)
         then pure ()
         else
-            let choices = connectionsWith (unVisited visited') (getNode maze i)
+            let choices = getEdgesWith c (unVisited visited') maze
              in if null choices
                     then hunt visited'
                     else do
                         next <- uniform choices
-                        modify' $ connectNodes i (snd next)
-                        generate visited' (fst next ^. eID)
+                        modify' $ connectEdge c next
+                        generate visited' next
 
-unVisited :: Set.Set NodeID -> (Edge e -> Bool)
-unVisited s (Edge i _) = Set.notMember i s
+unVisited :: (Ord a) => Set.Set a -> a -> Bool
+unVisited s c = Set.notMember c s
 
-isVisited :: Set.Set NodeID -> (Edge e -> Bool)
-isVisited s (Edge i _) = Set.member i s
+isVisited :: (Ord a) => Set.Set a -> a -> Bool
+isVisited s c = Set.member c s
 
--- | Returns the node ids of a node and direction to it's neighbour where the node hasn't been visited but the neighbour has.
-withVisitedNeighbour ::
-    (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d)) =>
-    Set.Set NodeID ->
-    MazeNode d ->
-    Maybe (NodeID, Rep d)
-withVisitedNeighbour ss node = do
-    let conns = connections node
-        id = node ^. nid
-    guard $ Set.notMember id ss
-    let xs = map snd $ filter (\(edge, _) -> Set.member (edge ^. eID) ss) conns
-    guard $ not (null xs)
-    Just (id, head xs)
+-- | Returns the coordinate of a node and a neighbour where the node hasn't been visited but the neighbour has.
+withVisitedNeighbour :: (Ord b, GridShape b) => Maze b a -> Set.Set b -> b -> Maybe (b, b)
+withVisitedNeighbour maze visited c = do
+    guard $ Set.notMember c visited
+    let conns = getEdgesWith c (isVisited visited) maze
+    guard $ not (null conns)
+    Just (c, head conns)
 
 hunt ::
-    (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d)) =>
-    Set.Set NodeID ->
-    MazeBuilder (Maze d) ()
+    (GridShape coord, Ord coord) =>
+    Set.Set coord -> MazeBuilder (Maze coord a) ()
 hunt visited = do
     searchUnvisited visited >>= generate visited
 
 -- | finds an unvisited node next to a visited one and connects them
 searchUnvisited ::
-    (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d)) =>
-    Set.Set NodeID ->
-    MazeBuilder (Maze d) NodeID
+    (GridShape coord, Ord coord) =>
+    Set.Set coord -> MazeBuilder (Maze coord a) coord
 searchUnvisited visited = do
     m <- get
-    let pairs = mapMaybe (withVisitedNeighbour visited) (Map.elems m)
+    let pairs = mapMaybe (withVisitedNeighbour m visited) (allCoords m)
     case pairs of
         [] -> error "could not find and unvisited Node"
         (conn@(next, _) : _) -> do
-            modify' $ uncurry connectNodes conn
+            modify' $ uncurry connectEdge conn
             pure next

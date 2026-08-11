@@ -14,10 +14,9 @@ import Data.Data (Proxy (Proxy))
 import Data.Functor.Rep (Representable (..))
 import Data.Map hiding (map)
 import Draw (DrawMaze)
-import GridKind (FromCardinalDir, SomeGrid (SomeGrid))
 import MazeShape (Algorithm (..), Config (..), Maze, MazeBuilder, Node, NodeID, Opposite, Path, Shape (..))
-import MazeShape.Sigma (Sigma, SigmaDir)
-import MazeShape.Square (Cardinal)
+import MazeShape.Sigma (Sigma)
+import MazeShape.Square
 import Options.Applicative
 
 algorithmP :: Parser Algorithm
@@ -60,16 +59,16 @@ config =
 --         )
 --     )
 
-algorithmFun ::
-    (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d), FromCardinalDir (Rep d)) =>
-    Algorithm ->
-    MazeBuilder (Maze d) ()
-algorithmFun BinaryTree = BinaryTree.generateMaze
-algorithmFun Sidewinder = Sidewinder.generateMaze
-algorithmFun AldousBroder = AldousBroder.generateMaze
-algorithmFun Wilson = Wilson.generateMaze
-algorithmFun HuntKill = HuntKill.generateMaze
-algorithmFun RecursiveBacktrack = RecursiveBacktrack.generateMaze
+-- algorithmFun ::
+--     (Representable d, Bounded (Rep d), Enum (Rep d), Eq (Rep d), Opposite (Rep d), FromCardinalDir (Rep d)) =>
+--     Algorithm ->
+--     MazeBuilder (Maze d) ()
+-- algorithmFun BinaryTree = BinaryTree.generateMaze
+-- algorithmFun Sidewinder = Sidewinder.generateMaze
+-- algorithmFun AldousBroder = AldousBroder.generateMaze
+-- algorithmFun Wilson = Wilson.generateMaze
+-- algorithmFun HuntKill = HuntKill.generateMaze
+-- algorithmFun RecursiveBacktrack = RecursiveBacktrack.generateMaze
 
 parseShape :: ReadM Shape
 parseShape = eitherReader $ \arg ->
@@ -79,6 +78,6 @@ parseShape = eitherReader $ \arg ->
         "hexagon" -> Right Hexagon
         _ -> Left "Shape must be 'square' or 'hex'"
 
-shapeToGrid :: Shape -> SomeGrid
-shapeToGrid Square = SomeGrid (Proxy :: Proxy Cardinal)
-shapeToGrid Hexagon = SomeGrid (Proxy :: Proxy Sigma)
+-- shapeToGrid :: Shape -> SomeGrid
+-- shapeToGrid Square = SomeGrid (Proxy :: Proxy Cardinal)
+-- shapeToGrid Hexagon = SomeGrid (Proxy :: Proxy Sigma)

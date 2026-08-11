@@ -74,6 +74,7 @@ library
                      Algorithm.HuntKill
                      Algorithm.RecursiveBacktrack
                      MazeShape
+                     MazeShapeV2
                      MazeShape.Square
                      MazeShape.Sigma
                      Draw
@@ -87,24 +88,25 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base >=4.18.2.1,
-                      boxes,
-                      hspec,
-                      containers,
-                      random,
+    build-depends:    JuicyPixels,
                       MonadRandom,
-                      transformers,
-                      mtl,
-                      diagrams-lib,
-                      diagrams-svg,
                       adjunctions,
-                      distributive,
-                      lens,
-                      JuicyPixels,
+                      base >=4.18.2.1,
+                      boxes,
+                      colour,
+                      containers,
+                      diagrams-lib,
                       diagrams-lib,
                       diagrams-svg,
-                      colour,
+                      diagrams-svg,
+                      distributive,
+                      hspec,
+                      lens,
+                      lens,
+                      mtl,
                       optparse-applicative,
+                      random,
+                      transformers
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -131,18 +133,19 @@ executable maze
 
     -- Other library packages from which modules are imported.
     build-depends:
-        base >=4.18.2.1,
-        maze,
-        random,
-        MonadRandom,
-        mtl,
-        transformers,
-        containers,
-        optparse-applicative,
-        diagrams-lib,
-        diagrams-svg,
-        adjunctions,
-        distributive
+                  MonadRandom,
+                  adjunctions,
+                  base >=4.18.2.1,
+                  containers,
+                  diagrams-lib,
+                  diagrams-svg,
+                  distributive,
+                  lens,
+                  maze,
+                  mtl,
+                  optparse-applicative,
+                  random,
+                  transformers
 
 
     -- Directories containing source files.
@@ -178,8 +181,9 @@ test-suite maze-test
 
     -- Test dependencies.
     build-depends:
-        base >=4.18.2.1,
-        maze,
-        hspec,
-        containers,
-        transformers
+                  base >=4.18.2.1,
+                  containers,
+                  hspec,
+                  lens,
+                  maze,
+                  transformers
