@@ -16,6 +16,7 @@ module MazeShapeV2 (
     mazeNodes,
     mazeEdges,
     EdgeState (..),
+    edgeKey,
     getEdgeState,
     getNorth,
     allCoords,
@@ -25,7 +26,6 @@ module MazeShapeV2 (
     getClosedEdges,
     NodeShape (..),
     edges,
-    (.+.),
 )
 where
 
@@ -35,13 +35,14 @@ import Control.Monad.Reader (ReaderT (runReaderT))
 import Control.Monad.State (MonadState, StateT (runStateT), gets)
 import Data.Map (Map)
 import Data.Maybe (catMaybes)
-import Diagrams (Path, Point, V2)
+import Diagrams (Point, V2)
 import Diagrams.Located (Located)
+import Diagrams.Prelude (Trail)
 import MazeShape (Config)
 
 data NodeShape direction = NodeShape
     { _center :: Point V2 Double
-    , _edges :: Map direction [Located (Path V2 Double)]
+    , _edges :: Map direction (Located (Trail V2 Double))
     {- ^ the edges are the possible edges that could be drawn
      we don't know if these should be drawn until we check the mazeEdges field
     -}
@@ -50,15 +51,23 @@ data NodeShape direction = NodeShape
 makeLenses ''NodeShape
 
 class GridShape coord where
+    -- | Each grid shape has it's own coordinate system that has directions between each coordinate pair.
     data Direction coord
 
+    {- | Get all neighbouring coordinates to the given starting point.
+    | It is not guaranteed that these are within a given maze since that depends on it's size.
+    -}
     neighbors :: coord -> [coord]
-    --  if the direction is bounded we can provide a default implementation
+
+    -- |  if the direction is bounded we can provide a default implementation
     default neighbors ::
         (Bounded (Direction coord), Enum (Direction coord)) =>
         coord -> [coord]
     neighbors c = catMaybes [neighbor c d | d <- [minBound .. maxBound]]
 
+    {- | Given a starting point and direction find the possible coordinate.
+    | it is possible in some cases that you might not get a new coordinate (for example in triangluar shaped mazes where adjacent triangles are flipped)
+    -}
     neighbor :: coord -> Direction coord -> Maybe coord
 
     -- | convert a coordinate to a point in 2D space.
@@ -82,17 +91,6 @@ getNorthEastNeighbors ::
     (GridShape c, NorthEastDirection (Direction c)) =>
     c -> (Maybe c, Maybe c)
 getNorthEastNeighbors c = (getNorth c, getEast c)
-
-newtype Square = Square (Int, Int)
-    deriving (Show, Eq, Ord)
-
-instance GridShape Square where
-    neighbors :: Square -> [Square]
-    neighbors (Square (x, y)) = [Square (x + a, y + b) | a <- [-1, 0, 1], b <- [-1, 0, 1], a /= b]
-    neighbor :: Square -> Direction Square -> Maybe Square
-    neighbor = undefined
-    toShape :: Square -> NodeShape (Direction Square)
-    toShape = undefined
 
 data EdgeState = Open | Closed
     deriving (Show, Eq)
@@ -178,12 +176,3 @@ runBuilder :: MazeBuilder state a -> Config -> state -> IO (a, state)
 runBuilder app c s = do
     (a, s') <- runStateT (runReaderT app c) s
     return (a, s')
-
-{- | Pointwise addition
-TODO put this somewhere better
-TODO make a type that implements Num?
--}
-(.+.) :: (Num a) => (a, a) -> (a, a) -> (a, a)
-(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
-
-infixl 6 .+.

@@ -7,10 +7,23 @@
 -- | Mazes with hexagonal shaped nodes.
 module MazeShape.Sigma where
 
+import Control.Monad (filterM)
+import Control.Monad.State (MonadState (get), State, evalState, gets, modify')
+import qualified Data.Map as Map
+import Data.Map.Strict (Map, elems, fromList)
+import Data.Set (Set, insert, notMember)
 import Diagrams.Backend.SVG (B)
 import Diagrams.Backend.SVG.CmdLine (mainWith)
 import Diagrams.Prelude hiding (Direction, center)
-import MazeShapeV2
+import Draw (mazeToDiagram)
+import MazeShapeV2 (
+    EdgeState (Closed),
+    GridShape (..),
+    Maze (Maze),
+    NodeShape (NodeShape),
+    connectEdge,
+    edgeKey,
+ )
 
 lineS :: Double
 lineS = 1
@@ -50,78 +63,93 @@ newtype Sigma = Sigma (Int, Int)
 
 instance GridShape Sigma where
     data Direction Sigma = North | South | NorthEast | NorthWest | SouthEast | SouthWest
-        deriving (Show, Enum, Bounded)
+        deriving (Show, Enum, Bounded, Eq, Ord)
 
     neighbor :: Sigma -> Direction Sigma -> Maybe Sigma
-    neighbor (Sigma (q, r)) North = Just $ Sigma (q, r + 1)
-    neighbor (Sigma (q, r)) South = Just $ Sigma (q, r - 1)
-    neighbor (Sigma (q, r)) NorthEast = Just $ Sigma (q + 1, r)
-    neighbor (Sigma (q, r)) NorthWest = Just $ Sigma (q - 1, r)
-    neighbor (Sigma (q, r)) SouthEast = Just $ Sigma (q + 1, r + 1)
-    neighbor (Sigma (q, r)) SouthWest = Just $ Sigma (q - 1, r - 1)
+    neighbor (Sigma (q, r)) North = Just $ Sigma (q, r - 1)
+    neighbor (Sigma (q, r)) South = Just $ Sigma (q, r + 1)
+    neighbor (Sigma (q, r)) NorthEast | even q = Just $ Sigma (q + 1, r - 1)
+    neighbor (Sigma (q, r)) NorthEast | odd q = Just $ Sigma (q + 1, r)
+    neighbor (Sigma (q, r)) NorthWest | even q = Just $ Sigma (q - 1, r - 1)
+    neighbor (Sigma (q, r)) NorthWest | odd q = Just $ Sigma (q - 1, r)
+    neighbor (Sigma (q, r)) SouthEast | even q = Just $ Sigma (q + 1, r)
+    neighbor (Sigma (q, r)) SouthEast | odd q = Just $ Sigma (q + 1, r + 1)
+    neighbor (Sigma (q, r)) SouthWest | even q = Just $ Sigma (q - 1, r)
+    neighbor (Sigma (q, r)) SouthWest | odd q = Just $ Sigma (q - 1, r + 1)
 
     toShape :: Sigma -> NodeShape (Direction Sigma)
-    toShape (Sigma pos) = NodeShape point undefined
+    toShape (Sigma pos) = NodeShape point (sigmaEdges point)
       where
         point = posToPoint pos
 
 posToPoint :: (Int, Int) -> Point V2 Double
-posToPoint (x, y)
-    | odd x =
-        (fromIntegral x * (xFarEast + xNearEast)) ^& (ySouth + fromIntegral y * yNorth * 2)
-    | otherwise = (fromIntegral x * (xFarEast + xNearEast)) ^& (fromIntegral y * (yNorth * 2))
+posToPoint (p, r')
+    | odd p =
+        (fromIntegral p * (xFarEast + xNearEast)) ^& (ySouth + fromIntegral r * yNorth * 2)
+    | otherwise = (fromIntegral p * (xFarEast + xNearEast)) ^& (fromIntegral r * (yNorth * 2))
+  where
+    r = -r'
 
--- TODO this needs to be the same directions as the base sigma directions so we can use it OR do we add the directions as keys?
--- TODO looks like this doesn't tesselate right now. Needs fixing
--- >>> mconcat $ sigmaEdges (0 ^& 0)
-sigmaEdges :: Point V2 Double -> [Located (Trail V2 Double)]
+sigmaEdges :: Point V2 Double -> Map (Direction Sigma) (Located (Trail V2 Double))
 sigmaEdges c =
-    map
-        (fromVertices . (map (\p -> c ^+^ p)))
-        [ [(xNearWest ^& yNorth), (xNearEast ^& yNorth)]
-        , [(xNearEast ^& yNorth), (xFarEast ^& center)]
-        , [(xFarEast ^& center), (xNearEast ^& ySouth)]
-        , [(xNearEast ^& ySouth), (xNearWest ^& ySouth)]
-        , [(xNearWest ^& ySouth), (xFarWest ^& center)]
-        , [(xFarWest ^& center), (xNearWest ^& yNorth)]
-        ]
-
-testDiag :: Diagram B
-testDiag =
-    mconcat
-        ( map
-            stroke
-            ((sigmaEdges $ posToPoint (1 ^& 1)) ++ (sigmaEdges $ posToPoint (0 ^& 0)) ++ (sigmaEdges $ posToPoint (1 ^& 2)))
-        )
-
--- to test ghci> :main -o test.svg -w 400
-main :: IO ()
-main = mainWith testDiag
+    fromList $
+        zip
+            [North, NorthEast, SouthEast, South, SouthWest, NorthWest]
+            ( map
+                (fromVertices . (map (\p -> c ^+^ p)))
+                [ [(xNearWest ^& yNorth), (xNearEast ^& yNorth)]
+                , [(xNearEast ^& yNorth), (xFarEast ^& center)]
+                , [(xFarEast ^& center), (xNearEast ^& ySouth)]
+                , [(xNearEast ^& ySouth), (xNearWest ^& ySouth)]
+                , [(xNearWest ^& ySouth), (xFarWest ^& center)]
+                , [(xFarWest ^& center), (xNearWest ^& yNorth)]
+                ]
+            )
 
 -- instance GridKind Sigma where
 --     makeGrid = newHexagonalGrid
 
--- newHexagonalGrid :: (Rep d ~ SigmaDir, Representable d) => Int -> Map.Map NodeID (Node d (Maybe a) Path)
--- newHexagonalGrid w =
---     Map.fromList [(NodeID (x, y), mkNode (x, y)) | y <- [0 .. w - 1], x <- [0 .. w - 1]]
---   where
---     mkNode pos = Node (NodeID pos) Nothing (tabulate (mkPaths w pos))
+newSigmaGrid :: Int -> Maze Sigma ()
+newSigmaGrid s =
+    Maze
+        ( foldl'
+            (\m n -> Map.insert n () m)
+            mempty
+            ns
+        )
+        ( foldl'
+            (\m n -> Map.insert n Closed m)
+            mempty
+            es
+        )
+  where
+    (ns, es) = evalState (buildGrid s [Sigma (0, 0)]) mempty
 
--- mkPaths :: Int -> (Int, Int) -> SigmaDir -> MEdge Path
--- mkPaths w pos dir = do
---     (dx, dy) <- dirOffset pos dir
---     let (x', y') = pos .+. (dx, dy)
---     guard (x' >= 0 && y' >= 0 && x' < w && y' < w)
---     return (Edge (NodeID (x', y')) Closed)
+type BuildState a = State (Set Sigma, Set (Sigma, Sigma)) a
 
--- directionNode :: NodeID -> SigmaDir -> NodeID
--- directionNode (NodeID pos) dir = NodeID $ pos .+. fromJust (dirOffset pos dir)
+notSeen :: Sigma -> BuildState Bool
+notSeen n = gets (\(s, _) -> notMember n s)
 
--- dirOffset :: (Int, Int) -> SigmaDir -> Maybe (Int, Int)
--- dirOffset (x, _) dir = case dir of
---     North -> Just (0, 1)
---     South -> Just (0, -1)
---     NorthEast -> Just (1, if odd x then 0 else 1)
---     SouthEast -> Just (1, if odd x then -1 else 0)
---     NorthWest -> Just (-1, if even x then 1 else 0)
---     SouthWest -> Just (-1, if even x then 0 else -1)
+-- | when we are building a grid add the node by recording the edges we need to connect and that we have seen the node on our walk.
+addNode :: Sigma -> [Sigma] -> BuildState ()
+addNode node edges =
+    modify'
+        ( \(ns, es) ->
+            (insert node ns, foldl' insertEdge es edges)
+        )
+  where
+    insertEdge es e = (\key -> insert key es) $ edgeKey node e
+
+-- | build a sigma grid by walking through each node in the grid and tracking connections and seen nodes as we go.
+buildGrid ::
+    Int -> [Sigma] -> BuildState (Set Sigma, Set (Sigma, Sigma))
+buildGrid _ [] = get
+buildGrid size (x : xs) = do
+    let ns = filter (inbounds size) $ neighbors x
+    next <- filterM notSeen ns
+    addNode x next
+    buildGrid size (xs ++ next)
+
+-- | returns true if the given coordinate is within the shape size.
+inbounds :: Int -> Sigma -> Bool
+inbounds size (Sigma (q, r)) = q >= 0 && r >= 0 && q < size && r < size

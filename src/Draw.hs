@@ -5,19 +5,53 @@
 
 module Draw where
 
-import Control.Monad.Random (MonadIO, Random, randomIO)
-import Control.Monad.Reader (MonadReader (ask), asks)
-import Control.Monad.State (get)
-import Data.Colour.SRGB.Linear (rgb)
+import Data.Map (foldrWithKey)
 import qualified Data.Map as Map
-import Diagrams.Backend.SVG
-import Diagrams.Prelude hiding (Path, value)
-import MazeShapeV2
+import Diagrams.Backend.SVG (B)
+import Diagrams.Prelude (
+    Diagram,
+    moveTo,
+    scale,
+    strokeLocTrail,
+    text,
+    (#),
+ )
+import MazeShapeV2 (
+    EdgeState (Open),
+    GridShape (neighbor, toShape),
+    Maze (Maze),
+    NodeShape (NodeShape),
+    edgeKey,
+ )
 
 type Solution coord = [coord]
 type DeadEnds coord = [coord]
 
 class DrawMaze a
+
+mazeToDiagram :: (Show coord, GridShape coord, Ord coord) => Maze coord () -> Diagram B
+mazeToDiagram (Maze nodes edges) = foldMap drawable (Map.keys nodes)
+  where
+    drawable n =
+        let (NodeShape center edgeLines) = toShape n
+         in foldrWithKey (toWall n) mempty edgeLines <> (text (show n) # scale 0.2 # moveTo center)
+
+    toWall n dir trail acc
+        | isPassage n dir = acc
+        | otherwise = acc <> strokeLocTrail trail
+
+    isPassage n dir = case neighbor n dir of
+        Just n' -> Map.member n' nodes && Map.lookup (edgeKey n n') edges == Just Open
+        _otherwise -> False
+
+-- to test ghci> :main -o test.svg -w 400
+-- main :: IO ()
+-- main =
+--     mainWith $
+--         mazeToDiagram $
+--             connectEdge (Sigma (0, 0)) (Sigma (1, 0)) $
+--                 connectEdge (Sigma (1, 1)) (Sigma (1, 0)) $
+--                     newSigmaGrid 2
 
 --     drawMaze :: Solution -> DeadEnds -> MazeBuilder (Maze a) (Diagram B)
 --     drawMaze solution deadEnds = do
