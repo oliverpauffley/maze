@@ -5,13 +5,11 @@ Walks the maze an either cuts a path south or east.
 -}
 module Algorithm.BinaryTree (generateMaze) where
 
-import Control.Lens
 import Control.Monad.RWS
 import Control.Monad.Random
 import Data.Foldable (traverse_)
-import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
-import MazeShapeV2 (
+import MazeShape (
     GridShape (..),
     Maze,
     MazeBuilder,

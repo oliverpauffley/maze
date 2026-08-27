@@ -10,7 +10,7 @@ import Control.Monad.RWS (
 import Control.Monad.Random (uniform)
 import Data.Foldable (traverse_)
 import qualified Data.Set as Set
-import MazeShapeV2 (
+import MazeShape (
     GridShape (Direction),
     Maze,
     MazeBuilder,

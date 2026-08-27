@@ -7,7 +7,7 @@ import Control.Monad.RWS (MonadState (get), modify')
 import Control.Monad.Random (guard, uniform)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-import MazeShapeV2 (
+import MazeShape (
     GridShape,
     Maze,
     MazeBuilder,

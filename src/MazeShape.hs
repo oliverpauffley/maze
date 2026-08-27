@@ -1,65 +1,49 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
-module MazeShape where
+module MazeShape (
+    GridShape (..),
+    Maze (..),
+    MazeBuilder,
+    NorthEastDirection,
+    Direction,
+    connectEdge,
+    getNorthEastNeighbors,
+    mazeNodes,
+    mazeEdges,
+    EdgeState (..),
+    edgeKey,
+    getEdgeState,
+    getNorth,
+    allCoords,
+    randomNode,
+    getEdgesWith,
+    getEdges,
+    getClosedEdges,
+    getOpenEdges,
+    NodeShape (..),
+    edges,
+    Config (..),
+    Algorithm (..),
+    Shape (..),
+    getNodeValue,
+)
+where
 
-import Control.Lens (makeLenses, view, (&), (.~), (^.))
-
-import Control.Monad.RWS (RWST (runRWST))
+import Control.Lens
 import Control.Monad.Random (MonadRandom, uniform)
-import Control.Monad.Trans.RWS (gets)
-import Data.Functor.Rep (Representable (..))
-import Data.Map (Map, adjust)
-import qualified Data.Map as Map hiding (mapMaybe)
-import Data.Maybe (mapMaybe)
-import Data.Tuple (swap)
-
-newtype NodeID = NodeID (Int, Int)
-    deriving (Show, Eq)
-
-instance Ord NodeID where
-    compare (NodeID a) (NodeID b) = compare a b
-
-data Path = Open | Closed
-    deriving (Eq, Show)
-
-openPath :: Path -> Path
-openPath Open = Open
-openPath Closed = Open
-
-isOpen :: Path -> Bool
-isOpen Open = True
-isOpen Closed = False
-
-data Edge e = Edge
-    { _eID :: NodeID
-    , _path :: e
-    }
-    deriving (Show, Eq)
-
-makeLenses ''Edge
-
-instance Functor Edge where
-    fmap :: (a -> b) -> Edge a -> Edge b
-    fmap f (Edge i e) = Edge i (f e)
-
-type MEdge e = Maybe (Edge e)
-
-type Position = (Int, Int)
-
-type Maze d = Map NodeID (Node d (Maybe Int) Path)
-
--- | Partial function to get a node from an ID
-getNode :: Maze d -> NodeID -> Node d (Maybe Int) Path
-getNode m i = case Map.lookup i m of
-    Just n -> n
-    Nothing -> error $ "can't get node " <> show i
+import Control.Monad.Reader (ReaderT (runReaderT))
+import Control.Monad.State (MonadState, StateT (runStateT), gets)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Maybe (catMaybes)
+import Diagrams (Point, V2)
+import Diagrams.Located (Located)
+import Diagrams.Prelude (Trail)
 
 data Config = Config
     { diagramSize :: Double
@@ -85,142 +69,146 @@ data Algorithm
     deriving (Eq, Show)
 
 data Shape
-    = Square
-    | Hexagon
+    = ShapeSquare
+    | ShapeHexagon
     deriving (Eq, Show)
 
+data NodeShape direction = NodeShape
+    { _center :: Point V2 Double
+    , _edges :: Map direction (Located (Trail V2 Double))
+    {- ^ the edges are the possible edges that could be drawn
+     we don't know if these should be drawn until we check the mazeEdges field
+    -}
+    }
+
+makeLenses ''NodeShape
+
+class GridShape coord where
+    -- | Each grid shape has it's own coordinate system that has directions between each coordinate pair.
+    data Direction coord
+
+    {- | Get all neighbouring coordinates to the given starting point.
+    | It is not guaranteed that these are within a given maze since that depends on it's size.
+    -}
+    neighbors :: coord -> [coord]
+
+    -- |  if the direction is bounded we can provide a default implementation
+    default neighbors ::
+        (Bounded (Direction coord), Enum (Direction coord)) =>
+        coord -> [coord]
+    neighbors c = catMaybes [neighbor c d | d <- [minBound .. maxBound]]
+
+    {- | Given a starting point and direction find the possible coordinate.
+    | it is possible in some cases that you might not get a new coordinate (for example in triangluar shaped mazes where adjacent triangles are flipped)
+    -}
+    neighbor :: coord -> Direction coord -> Maybe coord
+
+    -- | convert a coordinate to a point in 2D space.
+    toShape :: coord -> NodeShape (Direction coord)
+
+class NorthEastDirection d where
+    northDir :: d
+    eastDir :: d
+
+getNorth ::
+    (GridShape c, NorthEastDirection (Direction c)) =>
+    c -> Maybe c
+getNorth c = neighbor c northDir
+
+getEast ::
+    (GridShape c, NorthEastDirection (Direction c)) =>
+    c -> Maybe c
+getEast c = neighbor c eastDir
+
+getNorthEastNeighbors ::
+    (GridShape c, NorthEastDirection (Direction c)) =>
+    c -> (Maybe c, Maybe c)
+getNorthEastNeighbors c = (getNorth c, getEast c)
+
+data EdgeState = Open | Closed
+    deriving (Show, Eq)
+
+isOpen :: EdgeState -> Bool
+isOpen Open = True
+isOpen _ = False
+
+isClosed :: EdgeState -> Bool
+isClosed = not . isOpen
+
+data Maze coord nodeData = Maze
+    { _mazeNodes :: Map coord nodeData
+    , -- Edges are stored as a Map of coordinate pairs to their state.
+      _mazeEdges :: Map (coord, coord) EdgeState
+    }
+    deriving (Show, Eq)
+
+makeLenses ''Maze
+
+allCoords :: Maze coord nodeData -> [coord]
+allCoords maze = maze ^.. mazeNodes . ifolded . asIndex
+
+randomNode :: (MonadRandom m) => Maze coord a -> m coord
+randomNode m = uniform $ allCoords m
+
+instance Functor (Maze coord) where
+    fmap :: (a -> b) -> Maze coord a -> Maze coord b
+    fmap f (Maze ns es) = Maze (f <$> ns) es
+
+getNodeValue :: (Ord coord) => coord -> Maze coord a -> Maybe a
+getNodeValue c (Maze ns _) = Map.lookup c ns
+
+{- | Standardizes an edge pair so (A, B) and (B, A) result in the same key.
+all connections/data is stored with smallest value first.
+-}
+edgeKey :: (Ord coord) => coord -> coord -> (coord, coord)
+edgeKey c1 c2
+    | c1 <= c2 = (c1, c2)
+    | otherwise = (c2, c1)
+
+-- >>> getEdgeState 1 2 (Maze Map.empty (Map.fromList [((1,2), Closed)]))
+-- Just Closed
+getEdgeState :: (Ord coord) => coord -> coord -> Maze coord a -> Maybe EdgeState
+getEdgeState u v maze =
+    maze ^. mazeEdges . at (edgeKey u v)
+
+-- >>> setEdgeState 1 2 Open (Maze Map.empty (Map.fromList [((1,2), Closed)]))
+-- Maze {_mazeNodes = fromList [], _mazeEdges = fromList [((1,2),Open)]}
+setEdgeState :: (Ord coord) => coord -> coord -> EdgeState -> Maze coord nodeData -> Maze coord nodeData
+setEdgeState u v state maze =
+    maze & mazeEdges . at (edgeKey u v) ?~ state
+
+connectEdge :: (Ord coord) => coord -> coord -> Maze coord a -> Maze coord a
+connectEdge u v maze = setEdgeState u v Open maze
+
+getEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [(coord, EdgeState)]
+getEdges c maze = getEdges' c maze (const True)
+
+getEdges' ::
+    (Ord coord, GridShape coord) => coord -> Maze coord a -> (EdgeState -> Bool) -> [(coord, EdgeState)]
+getEdges' c maze f =
+    let
+        ns = neighbors c
+     in
+        foldl' go [] ns
+  where
+    go acc c' = case getEdgeState c c' maze of
+        Just e | f e -> (c', e) : acc
+        _otherwise -> acc
+
+getEdgesWith :: (Ord coord, GridShape coord) => coord -> (coord -> Bool) -> Maze coord a -> [coord]
+getEdgesWith c f maze = filter f $ map fst $ getEdges' c maze (const True)
+
+getOpenEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [coord]
+getOpenEdges c maze = fst <$> getEdges' c maze isOpen
+
+getClosedEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [coord]
+getClosedEdges c maze = fst <$> getEdges' c maze isClosed
+
 -- | The main monad for the generate of mazes
-type MazeBuilder s = RWST Config () s IO
+type MazeBuilder s a = ReaderT Config (StateT s IO) a
 
 -- | Run the builder to produce a maze
 runBuilder :: MazeBuilder state a -> Config -> state -> IO (a, state)
 runBuilder app c s = do
-    (a, s', _) <- runRWST app c s
+    (a, s') <- runStateT (runReaderT app c) s
     return (a, s')
-
-{- | A maze node with a set of possible connections and value. Each node has a node id that is used as the key to select the node. The directions are Maybe as on the edges or after masking has
-been applied their may not be a connection.
--}
-data Node d a e = Node
-    { _nid :: NodeID
-    , _value :: a
-    , _directions :: d (MEdge e)
-    }
-
-makeLenses ''Node
-
-type MazeNode d = Node d (Maybe Int) Path
-
-randomNode :: MazeBuilder (Maze d) (Node d (Maybe Int) Path)
-randomNode = uniform =<< gets Map.elems
-
-{- | setter takes an index within a representable functor and updates that index's value
- whilst keeping the rest the same.
--}
-setter :: (Representable d, Eq (Rep d)) => d a -> Rep d -> a -> d a
-setter f updRep val =
-    tabulate setter'
-  where
-    setter' rep = if rep == updRep then val else index f rep
-
-{- | A set of directions where there is the concept of a reverse direction
- opposite (opposite d) == d
--}
-class Opposite a where
-    opposite :: a -> a
-
--- | list all connections from current node.
-connections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a e -> [(Edge e, Rep d)]
-connections (Node _ _ dirs) = mapMaybe (\(medge, dir) -> (,dir) <$> medge) $ toList dirs
-
--- | list all nodes and filter with filtering function
-connectionsWith ::
-    (Representable d, Bounded (Rep d), Enum (Rep d)) => (Edge e -> Bool) -> Node d a e -> [(Edge e, Rep d)]
-connectionsWith p n = filter (p . fst) $ connections n
-
-openConnections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a Path -> [NodeID]
-openConnections n = (\(e, _) -> e ^. eID) <$> connectionsWith (\e -> (== Open) $ e ^. path) n
-
-closedConnections :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a Path -> [(NodeID, Rep d)]
-closedConnections n = (\(e, dir) -> (e ^. eID, dir)) <$> connectionsWith (\e -> (== Closed) $ e ^. path) n
-
--- | given a node, id and direction; apply a function on that node and dir and it's opposite
-changeNodes ::
-    (Representable d, Eq (Rep d), Opposite (Rep d)) =>
-    Maze d ->
-    NodeID ->
-    Rep d ->
-    (Maze d -> NodeID -> Rep d -> Maze d) ->
-    Maze d
-changeNodes m id dir f = f (f m id dir) id2 (opposite dir)
-  where
-    -- lookup the node directions from where are connecting from
-    nodeDirs = view directions <$> Map.lookup id m
-    -- find the node we are connecting to
-    idNode Nothing = error "could not find node"
-    idNode (Just dirs) = case index dirs dir of
-        Nothing -> error "could not connect node, no node"
-        Just edge -> edge ^. eID
-
-    id2 = idNode nodeDirs
-
-{- | connect the given node ID to the node in the direction given. Requires that you can find an opposite direction to connect the new node back to the starting node.
-keeps the connection bidirectional.
--}
-connectNodes :: (Representable d, Eq (Rep d), Opposite (Rep d)) => NodeID -> Rep d -> Maze d -> Maze d
-connectNodes id dir m = changeNodes m id dir connectNode
-
--- | connect a node to the node in the given direction
-connectNode :: (Representable d, Eq (Rep d)) => Maze d -> NodeID -> Rep d -> Maze d
-connectNode m id dir = adjust (connectNode' dir) id m
-
--- | connectNode' takes a direction and a node and opens that connection within the nodes directions
-connectNode' :: (Representable d, Eq (Rep d)) => Rep d -> Node d a Path -> Node d a Path
-connectNode' dir node =
-    let dirs = node ^. directions
-        edge = index dirs dir
-        newEdge = fmap openPath <$> edge
-        dirs' = setter dirs dir newEdge
-     in node & directions .~ dirs'
-
--- | removes a node from it's direction to the given ID so it is no longer connected with the given node
-removeNodes :: (Representable d, Eq (Rep d), Opposite (Rep d)) => NodeID -> Rep d -> Maze d -> Maze d
-removeNodes id dir m = changeNodes m id dir removeNode
-
-removeNode :: (Representable d, Eq (Rep d)) => Maze d -> NodeID -> Rep d -> Maze d
-removeNode m id dir = adjust (removeNode' dir) id m
-
-removeNode' :: (Representable d, Eq (Rep d)) => Rep d -> Node d a Path -> Node d a Path
-removeNode' dir node =
-    let dirs = node ^. directions
-        dirs' = setter dirs dir Nothing
-     in node & directions .~ dirs'
-
--- | randomDirection picks a random direction from the node provided that exists. It does not check if the path is currently open or closed
-randomDirection :: (MonadRandom m, Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a e -> m (Rep d, Edge e)
-randomDirection n =
-    randomDirectionWith n (const True)
-
--- | get a random direction after filtering the edges with the given predicate.
-randomDirectionWith ::
-    (MonadRandom m, Representable d, Bounded (Rep d), Enum (Rep d)) => Node d a e -> (Edge e -> Bool) -> m (Rep d, Edge e)
-randomDirectionWith n p =
-    uniform . filterEdge p . map swap . toList $ n ^. directions
-  where
-    filterEdge _ [] = []
-    filterEdge p ((_, Nothing) : xs) = filterEdge p xs
-    filterEdge p ((dir, Just e) : xs)
-        | p e = (dir, e) : filterEdge p xs
-        | otherwise = filterEdge p xs
-
--- | turn a representable functor into a list of each part of the functor with it's index value
-toList :: (Representable d, Bounded (Rep d), Enum (Rep d)) => d b -> [(b, Rep d)]
-toList r =
-    let range = [minBound .. maxBound]
-     in map (\dir -> (index r dir, dir)) range
-
--- | Pointwise addition
-(.+.) :: (Int, Int) -> (Int, Int) -> (Int, Int)
-(x1, y1) .+. (x2, y2) = (x1 + x2, y1 + y2)
-
-infixl 6 .+.

@@ -16,7 +16,7 @@ import Diagrams.Prelude (
     text,
     (#),
  )
-import MazeShapeV2 (
+import MazeShape (
     EdgeState (Open),
     GridShape (neighbor, toShape),
     Maze (Maze),

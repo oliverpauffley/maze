@@ -10,18 +10,15 @@ module MazeShape.Sigma where
 import Control.Monad (filterM)
 import Control.Monad.State (MonadState (get), State, evalState, gets, modify')
 import qualified Data.Map as Map
-import Data.Map.Strict (Map, elems, fromList)
+import Data.Map.Strict (Map, fromList)
 import Data.Set (Set, insert, notMember)
-import Diagrams.Backend.SVG (B)
-import Diagrams.Backend.SVG.CmdLine (mainWith)
 import Diagrams.Prelude hiding (Direction, center)
-import Draw (mazeToDiagram)
-import MazeShapeV2 (
+import GridKind (GridKind (makeGrid))
+import MazeShape (
     EdgeState (Closed),
     GridShape (..),
     Maze (Maze),
     NodeShape (NodeShape),
-    connectEdge,
     edgeKey,
  )
 
@@ -106,8 +103,8 @@ sigmaEdges c =
                 ]
             )
 
--- instance GridKind Sigma where
---     makeGrid = newHexagonalGrid
+instance GridKind Sigma where
+    makeGrid = newSigmaGrid
 
 newSigmaGrid :: Int -> Maze Sigma ()
 newSigmaGrid s =

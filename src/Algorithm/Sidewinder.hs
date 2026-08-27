@@ -8,7 +8,7 @@ import Control.Monad.Random as Random (fromList)
 import Data.Foldable (traverse_)
 import Data.Map.Strict as Map (keys)
 import Data.Maybe (maybeToList)
-import MazeShapeV2 (
+import MazeShape (
     EdgeState (Closed, Open),
     GridShape (Direction),
     Maze,

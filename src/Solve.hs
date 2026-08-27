@@ -1,100 +1,91 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TupleSections #-}
 
 module Solve where
 
 import Control.Lens (view, (&), (?~), (^.))
+import Control.Monad (guard)
 import Control.Monad.RWS (MonadState (get, put), gets, modify')
-import Data.Foldable (maximumBy, minimumBy, traverse_)
+import Control.Monad.Random (MonadRandom, uniform)
+import Data.Foldable (Foldable (foldMap'), maximumBy, minimumBy, traverse_)
 import Data.Function (on)
 import Data.Functor.Rep (Representable (..))
-import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust, mapMaybe)
 import Data.Traversable (for)
-import MazeShape (
-    Edge,
-    Maze,
-    MazeBuilder,
-    MazeNode,
-    Node (..),
-    NodeID (NodeID),
-    Path (Open),
-    connectionsWith,
-    eID,
-    getNode,
-    nid,
-    openConnections,
-    path,
-    randomNode,
-    value,
- )
+import MazeShape
 
 -- | a node position with it's distance from a starting postion.
-type NodeDistance = (NodeID, Int)
+type NodeDistance coord = (coord, Int)
 
-distance :: (Representable d, Bounded (Rep d), Enum (Rep d)) => Int -> NodeID -> MazeBuilder (Maze d) ()
-distance d nid = do
-    m <- get
-    let node@(Node _ val _) = getNode m nid
-    if isJust val
-        then return ()
-        else do
-            modify' $ setValue d nid
-            let toUpdate = openConnections node
-            traverse_ (distance (d + 1)) toUpdate
-
--- update the value in the node within the map
-setValue :: Int -> NodeID -> Maze d -> Maze d
-setValue d = Map.adjust (\x -> x & value ?~ d)
-
-solveNode :: (Representable d, Bounded (Rep d), Enum (Rep d)) => NodeID -> MazeBuilder (Maze d) [NodeID]
-solveNode nid = do
-    m <- get
-    let node@(Node _ val _) = getNode m nid
-    case val of
-        (Just v) -> do
-            let paths = openConnections node
-                next = findLowestPath v paths m
-            nids <- for next solveNode
-            return $ nid : concat nids
-        Nothing -> pure []
-
-findLowestPath :: Int -> [NodeID] -> Maze d -> Maybe NodeID
-findLowestPath val ns m = do
-    let vs = filter ((< val) . snd) $ mapMaybe (nodeValue m) ns
-    if null vs
-        then Nothing
-        else Just $ fst (minimumBy (compare `on` snd) vs)
+{- | walk through the maze and assign the distance walked as the value of the node we reach.
+for each step increase the distance until we have walked all nodes in the maze
+-}
+distance :: (GridShape coord, Ord coord) => Int -> Maze coord () -> coord -> Map coord Int
+distance d maze coord = go d maze coord mempty
   where
-    nodeValue m i = Map.lookup i m >>= (\v -> (,) i <$> v) . view value
+    go dis m c values =
+        case Map.lookup c values of
+            -- if we have already set a value here we should just return
+            Just _ -> values
+            Nothing ->
+                let nextNodes = getOpenEdges c m
+                 in Map.insert c dis values <> foldMap' (\n -> go (dis + 1) m n values) nextNodes
 
-solve :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
-solve = do
-    m <- get
-    solveNode $ fst $ Map.findMax m
+solveNode :: (Show coord, GridShape coord, Ord coord) => coord -> Maze coord Int -> [coord]
+solveNode coord maze =
+    let val = getNodeValue coord maze
+        connections = getOpenEdges coord maze
+     in case val of
+            Nothing -> error $ "trying to solve and we have walked to a node not on the grid" <> show coord
+            Just v ->
+                case findLowestPath v connections maze of
+                    Nothing -> []
+                    Just next -> next : solveNode next maze
 
--- find the longestPath in the maze
-solveLongest :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
-solveLongest = do
-    m <- get
-    solveNode $ maxElement m
+findLowestPath :: (Ord coord) => Int -> [coord] -> Maze coord Int -> Maybe coord
+findLowestPath val connections m = do
+    let values = filter ((< val) . snd) $ mapMaybe (\c -> (c,) <$> getNodeValue c m) connections
+    case values of
+        [] -> Nothing
+        xs -> (Just . fst . minimum) xs
 
-maxElement :: Map NodeID (Node d (Maybe Int) Path) -> NodeID
-maxElement m = fst $ maximumBy (compare `on` view value . snd) (Map.assocs m)
+solve :: (MonadRandom m, Show coord, GridShape coord, Ord coord) => Maze coord () -> m [coord]
+solve maze = do
+    start <- randomNode maze
+    let walkedMaze = distance 0 maze start
+        mx = maxElement walkedMaze
+        maze' = Maze walkedMaze (maze ^. mazeEdges)
+    return $ solveNode mx maze'
 
--- | Finds a longest route through a maze by applying Djkstra's algorithm twice
-findLongestRoute :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
-findLongestRoute = do
-    blankMaze <- get -- get the un-solved maze
+-- solve :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
+-- solve = do
+--     m <- get
+--     solveNode $ fst $ Map.findMax m
 
-    -- solve once
-    start <- randomNode
-    distance 0 (start ^. nid)
+-- -- find the longestPath in the maze
+-- solveLongest :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
+-- solveLongest = do
+--     m <- get
+--     solveNode $ maxElement m
 
-    -- plot the distances from the highestElement
+maxElement :: Map coord Int -> coord
+maxElement m = fst $ maximumBy (compare `on` snd) (Map.assocs m)
 
-    newStart <- gets maxElement
+-- -- | Finds a longest route through a maze by applying Djkstra's algorithm twice
+-- findLongestRoute :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
+-- findLongestRoute = do
+--     blankMaze <- get -- get the un-solved maze
 
-    -- reset and solve again
-    put blankMaze
-    distance 0 newStart >> solveLongest
+--     -- solve once
+--     start <- randomNode
+--     distance 0 (start ^. nid)
+
+--     -- plot the distances from the highestElement
+
+--     newStart <- gets maxElement
+
+--     -- reset and solve again
+--     put blankMaze
+--     distance 0 newStart >> solveLongest

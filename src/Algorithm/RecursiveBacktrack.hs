@@ -6,7 +6,7 @@ module Algorithm.RecursiveBacktrack (generateMaze) where
 import Control.Monad.RWS (MonadState (get), modify')
 import Control.Monad.Random (uniform)
 import qualified Data.Set as Set
-import MazeShapeV2 (
+import MazeShape (
     GridShape,
     Maze,
     MazeBuilder,
