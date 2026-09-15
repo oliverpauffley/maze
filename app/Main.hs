@@ -1,9 +1,21 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+
 module Main where
 
 import Data.Data (Proxy)
 import DeadEnds (getDeadEnds)
 import Diagrams.Backend.SVG (renderSVG)
 import Diagrams.Prelude hiding (Path, connect)
+import Draw (mazeToDiagram)
+import GridKind (GridKind (..), SomeGrid (..))
 import MazeShape
 import Options.Applicative
 import Param
@@ -11,8 +23,6 @@ import Solve (findLongestRoute)
 
 main :: IO ()
 main = do
-    undefined
-
     customExecParser p opts >>= run
   where
     opts =
@@ -25,8 +35,10 @@ run :: Config -> IO ()
 run cfg@Config{..} = do
     case shapeToGrid shape of
         SomeGrid (_ :: Proxy d) -> do
-            let m = makeGrid @d cfg . mazeSize
-            (solution, maze) <- runBuilder (algorithmFun algorithm >> Solve.findLongestRoute) cfg m
-            (deadEnds, maze') <- runBuilder getDeadEnds cfg maze
-            (picture, _) <- runBuilder (drawMaze solution deadEnds) cfg maze'
-            renderSVG fileName (mkWidth cfg . diagramSize) picture
+            let m = makeGrid @d $ mazeSize
+            (_, maze) <- runBuilder (algorithmFun algorithm) cfg m
+            -- TODO wire up solutions and dead ends
+            solution <- Solve.findLongestRoute maze
+            let deadEnds = getDeadEnds maze
+                diagram = mazeToDiagram maze
+            renderSVG fileName (mkWidth diagramSize) diagram

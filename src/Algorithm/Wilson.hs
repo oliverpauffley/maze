@@ -23,7 +23,7 @@ import MazeShape (
 -- | a path of connections that we want to make.
 type Path coord = [(coord, coord)]
 
-generateMaze :: (GridShape coord, Ord coord) => MazeBuilder (Maze coord a) ()
+generateMaze :: (GridShape coord, Ord coord, Show coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
     m <- get
     let unvisited = Set.fromList $ allCoords m
@@ -31,7 +31,7 @@ generateMaze = do
     newStart unvisited'
 
 generate ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord ->
     Path coord ->
     coord ->
@@ -47,7 +47,7 @@ generate unvisited path c = do
             connectPath unvisited path'
 
 connectPath ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord ->
     Path coord ->
     MazeBuilder (Maze coord a) ()
@@ -59,7 +59,7 @@ connectPath unvisited path = do
         else newStart unvisited'
 
 newStart ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord ->
     MazeBuilder (Maze coord a) ()
 newStart unvisited = do
@@ -67,7 +67,7 @@ newStart unvisited = do
     nextCoord <- uniform unvisited
     nextCoord' <- uniform $ getClosedEdges nextCoord m
     let nextPath = [(nextCoord, nextCoord')]
-    generate unvisited nextPath nextCoord
+    generate unvisited nextPath nextCoord'
 
 deleteRandom :: (Ord a) => Set.Set a -> IO (Set.Set a)
 deleteRandom ss = do
@@ -75,7 +75,7 @@ deleteRandom ss = do
     return $ Set.delete vis ss
 
 connectAll ::
-    (GridShape coord, Ord coord) => Path coord -> MazeBuilder (Maze coord a) ()
+    (GridShape coord, Ord coord, Show coord) => Path coord -> MazeBuilder (Maze coord a) ()
 connectAll = traverse_ (\(a, b) -> modify' (connectEdge a b))
 
 deleteAll :: (Ord a) => Set.Set a -> [a] -> Set.Set a
@@ -83,12 +83,12 @@ deleteAll = foldr Set.delete
 
 -- | check the current path for a loop, if it exists remove it
 
--- >>> updatePath [(0,0), (1,0), (1,1), (0,1)] (0,0)
--- [(0,0)]
+-- >>> updatePath [((0,0), (1,0)), ((1,0), (1,1)), ((1,1), (0,1)), ((0,1), (0,0))] ((0,0), (1,0))
+-- [((0,0),(1,0))]
 
 -- >>> updatePath [(0,0), (1,0), (1,1), (2,1), (2,2), (1,2)] (1,1)
--- [(0,0),(1,0),(1,1)]
+-- [(0,0),(1,1)]
 updatePath :: (Eq a) => [(a, a)] -> (a, a) -> [(a, a)]
-updatePath xs next = ys ++ [next]
+updatePath xs n@(next, _) = ys ++ [n]
   where
-    (ys, _) = break (== next) xs
+    (ys, _) = break ((== next) . fst) xs

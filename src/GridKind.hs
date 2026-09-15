@@ -11,5 +11,11 @@ class GridKind d where
 
 data SomeGrid where
     SomeGrid ::
+        ( GridKind d
+        , GridShape d
+        , Ord d
+        , Show d
+        , NorthEastDirection (Direction d)
+        ) =>
         Proxy d ->
         SomeGrid

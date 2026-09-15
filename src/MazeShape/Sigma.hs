@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -19,6 +20,7 @@ import MazeShape (
     GridShape (..),
     Maze (Maze),
     NodeShape (NodeShape),
+    NorthEastDirection (..),
     edgeKey,
  )
 
@@ -103,9 +105,6 @@ sigmaEdges c =
                 ]
             )
 
-instance GridKind Sigma where
-    makeGrid = newSigmaGrid
-
 newSigmaGrid :: Int -> Maze Sigma ()
 newSigmaGrid s =
     Maze
@@ -150,3 +149,12 @@ buildGrid size (x : xs) = do
 -- | returns true if the given coordinate is within the shape size.
 inbounds :: Int -> Sigma -> Bool
 inbounds size (Sigma (q, r)) = q >= 0 && r >= 0 && q < size && r < size
+
+instance GridKind Sigma where
+    makeGrid = newSigmaGrid
+
+instance NorthEastDirection (Direction Sigma) where
+    northDir :: Direction Sigma
+    northDir = North
+    eastDir :: Direction Sigma
+    eastDir = SouthEast

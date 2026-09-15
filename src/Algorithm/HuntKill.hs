@@ -17,11 +17,11 @@ import MazeShape (
     randomNode,
  )
 
-generateMaze :: (GridShape coord, Ord coord) => MazeBuilder (Maze coord a) ()
-generateMaze = randomNode >>= generate Set.empty
+generateMaze :: (GridShape coord, Ord coord, Show coord) => MazeBuilder (Maze coord a) ()
+generateMaze = get >>= randomNode >>= generate Set.empty
 
 generate ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord -> coord -> MazeBuilder (Maze coord a) ()
 generate visited c = do
     maze <- get
@@ -52,14 +52,14 @@ withVisitedNeighbour maze visited c = do
     Just (c, head conns)
 
 hunt ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord -> MazeBuilder (Maze coord a) ()
 hunt visited = do
     searchUnvisited visited >>= generate visited
 
 -- | finds an unvisited node next to a visited one and connects them
 searchUnvisited ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord -> MazeBuilder (Maze coord a) coord
 searchUnvisited visited = do
     m <- get

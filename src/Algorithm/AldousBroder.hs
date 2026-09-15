@@ -18,7 +18,7 @@ import MazeShape (
  )
 
 generate ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord ->
     coord ->
     MazeBuilder (Maze coord a) ()
@@ -39,7 +39,7 @@ generate visited coord = do
                             generate visited' next
 
 generateMaze ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     MazeBuilder (Maze coord a) ()
 generateMaze =
-    randomNode >>= generate Set.empty
+    get >>= randomNode >>= generate Set.empty

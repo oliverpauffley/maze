@@ -15,13 +15,14 @@ import MazeShape (
     randomNode,
  )
 
-generateMaze :: (GridShape coord, Ord coord) => MazeBuilder (Maze coord a) ()
+generateMaze :: (GridShape coord, Ord coord, Show coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
-    start <- randomNode
+    m <- get
+    start <- randomNode m
     generate Set.empty [start]
 
 generate ::
-    (GridShape coord, Ord coord) =>
+    (GridShape coord, Ord coord, Show coord) =>
     Set.Set coord -> [coord] -> MazeBuilder (Maze coord a) ()
 generate _ [] = pure ()
 generate s ns@(x : xs) = do

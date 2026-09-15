@@ -9,8 +9,8 @@ module MazeShape (
     GridShape (..),
     Maze (..),
     MazeBuilder,
-    NorthEastDirection,
-    Direction,
+    runBuilder,
+    NorthEastDirection (..),
     connectEdge,
     getNorthEastNeighbors,
     mazeNodes,
@@ -37,10 +37,12 @@ where
 import Control.Lens
 import Control.Monad.Random (MonadRandom, uniform)
 import Control.Monad.Reader (ReaderT (runReaderT))
-import Control.Monad.State (MonadState, StateT (runStateT), gets)
+import Control.Monad.State (StateT (runStateT))
+import Data.Foldable (find)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, isJust)
+import qualified Debug.Trace as Debug
 import Diagrams (Point, V2)
 import Diagrams.Located (Located)
 import Diagrams.Prelude (Trail)
@@ -89,6 +91,7 @@ class GridShape coord where
 
     {- | Get all neighbouring coordinates to the given starting point.
     | It is not guaranteed that these are within a given maze since that depends on it's size.
+    | for example at coord (0,0) this neighbors will return (-1,-1) which is not a valid coordinate
     -}
     neighbors :: coord -> [coord]
 
@@ -106,6 +109,7 @@ class GridShape coord where
     -- | convert a coordinate to a point in 2D space.
     toShape :: coord -> NodeShape (Direction coord)
 
+-- | some coordinate systems implement a set of directions that could be casted to north and east.
 class NorthEastDirection d where
     northDir :: d
     eastDir :: d
@@ -120,11 +124,6 @@ getEast ::
     c -> Maybe c
 getEast c = neighbor c eastDir
 
-getNorthEastNeighbors ::
-    (GridShape c, NorthEastDirection (Direction c)) =>
-    c -> (Maybe c, Maybe c)
-getNorthEastNeighbors c = (getNorth c, getEast c)
-
 data EdgeState = Open | Closed
     deriving (Show, Eq)
 
@@ -138,15 +137,19 @@ isClosed = not . isOpen
 data Maze coord nodeData = Maze
     { _mazeNodes :: Map coord nodeData
     , -- Edges are stored as a Map of coordinate pairs to their state.
+      -- the first coord in the pair is smallest so that we don't store from both directions
+      -- e.g. ((0,1), (1,1)) would be in the map but not ((1,1), (0,1)).
       _mazeEdges :: Map (coord, coord) EdgeState
     }
     deriving (Show, Eq)
 
 makeLenses ''Maze
 
+-- | Return all coordinates in the maze.
 allCoords :: Maze coord nodeData -> [coord]
-allCoords maze = maze ^.. mazeNodes . ifolded . asIndex
+allCoords maze = Map.keys $ maze ^. mazeNodes
 
+-- | Select a random node from anywhere within the maze.
 randomNode :: (MonadRandom m) => Maze coord a -> m coord
 randomNode m = uniform $ allCoords m
 
@@ -156,6 +159,18 @@ instance Functor (Maze coord) where
 
 getNodeValue :: (Ord coord) => coord -> Maze coord a -> Maybe a
 getNodeValue c (Maze ns _) = Map.lookup c ns
+
+isNode :: (Ord coord) => Maze coord a -> coord -> Bool
+isNode m c = isJust $ getNodeValue c m
+
+getNorthEastNeighbors ::
+    (GridShape c, NorthEastDirection (Direction c), Ord c) =>
+    Maze c a ->
+    c ->
+    (Maybe c, Maybe c)
+getNorthEastNeighbors maze c =
+    let (n, e) = (getNorth c, getEast c)
+     in (find (isNode maze) n, find (isNode maze) e)
 
 {- | Standardizes an edge pair so (A, B) and (B, A) result in the same key.
 all connections/data is stored with smallest value first.
@@ -171,14 +186,19 @@ getEdgeState :: (Ord coord) => coord -> coord -> Maze coord a -> Maybe EdgeState
 getEdgeState u v maze =
     maze ^. mazeEdges . at (edgeKey u v)
 
--- >>> setEdgeState 1 2 Open (Maze Map.empty (Map.fromList [((1,2), Closed)]))
+-- >>> setEdgeState 2 1 Open (Maze Map.empty (Map.fromList [((1,2), Closed)]))
 -- Maze {_mazeNodes = fromList [], _mazeEdges = fromList [((1,2),Open)]}
 setEdgeState :: (Ord coord) => coord -> coord -> EdgeState -> Maze coord nodeData -> Maze coord nodeData
 setEdgeState u v state maze =
     maze & mazeEdges . at (edgeKey u v) ?~ state
 
-connectEdge :: (Ord coord) => coord -> coord -> Maze coord a -> Maze coord a
-connectEdge u v maze = setEdgeState u v Open maze
+-- >>> connectEdge 2 1 (Maze Map.empty (Map.fromList [((1,2), Closed)]))
+-- Maze {_mazeNodes = fromList [], _mazeEdges = fromList [((1,2),Open)]}
+connectEdge :: (Ord coord, Show coord) => coord -> coord -> Maze coord a -> Maze coord a
+connectEdge u v maze =
+    if not (isNode maze u) || not (isNode maze v)
+        then Debug.traceShow (u, v) error "connecting invalid node "
+        else setEdgeState u v Open maze
 
 getEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [(coord, EdgeState)]
 getEdges c maze = getEdges' c maze (const True)
@@ -187,7 +207,7 @@ getEdges' ::
     (Ord coord, GridShape coord) => coord -> Maze coord a -> (EdgeState -> Bool) -> [(coord, EdgeState)]
 getEdges' c maze f =
     let
-        ns = neighbors c
+        ns = filter (isNode maze) $ neighbors c
      in
         foldl' go [] ns
   where
@@ -196,7 +216,7 @@ getEdges' c maze f =
         _otherwise -> acc
 
 getEdgesWith :: (Ord coord, GridShape coord) => coord -> (coord -> Bool) -> Maze coord a -> [coord]
-getEdgesWith c f maze = filter f $ map fst $ getEdges' c maze (const True)
+getEdgesWith c f maze = filter f $ map fst $ getEdges c maze
 
 getOpenEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [coord]
 getOpenEdges c maze = fst <$> getEdges' c maze isOpen

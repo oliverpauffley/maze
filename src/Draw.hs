@@ -1,9 +1,7 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies #-}
 
-module Draw where
+module Draw (mazeToDiagram)
+where
 
 import Data.Map (foldrWithKey)
 import qualified Data.Map as Map
@@ -17,7 +15,7 @@ import Diagrams.Prelude (
     (#),
  )
 import MazeShape (
-    EdgeState (Open),
+    EdgeState (Closed, Open),
     GridShape (neighbor, toShape),
     Maze (Maze),
     NodeShape (NodeShape),
@@ -27,22 +25,23 @@ import MazeShape (
 type Solution coord = [coord]
 type DeadEnds coord = [coord]
 
-class DrawMaze a
-
 mazeToDiagram :: (Show coord, GridShape coord, Ord coord) => Maze coord () -> Diagram B
-mazeToDiagram (Maze nodes edges) = foldMap drawable (Map.keys nodes)
+mazeToDiagram (Maze nodes edges) = foldMap drawNode (Map.keys nodes)
   where
-    drawable n =
+    drawNode n =
         let (NodeShape center edgeLines) = toShape n
-         in foldrWithKey (toWall n) mempty edgeLines <> (text (show n) # scale 0.2 # moveTo center)
+         in foldrWithKey (walls n) mempty edgeLines <> (text (show n) # scale 0.2 # moveTo center)
 
-    toWall n dir trail acc
-        | isPassage n dir = acc
-        | otherwise = acc <> strokeLocTrail trail
+    -- if the edge is an open passage we should not draw a wall. Otherwise draw it!
+    walls n dir trail acc = case isOpen n dir of
+        Open -> acc
+        Closed -> acc <> strokeLocTrail trail
 
-    isPassage n dir = case neighbor n dir of
-        Just n' -> Map.member n' nodes && Map.lookup (edgeKey n n') edges == Just Open
-        _otherwise -> False
+    -- check for the node and direction if the neighbor is present there and open.
+    -- anything else return closed.
+    isOpen n dir = case neighbor n dir of
+        Just n' | Map.member n' nodes && Map.lookup (edgeKey n n') edges == Just Open -> Open
+        _otherwise -> Closed
 
 -- to test ghci> :main -o test.svg -w 400
 -- main :: IO ()

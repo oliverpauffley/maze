@@ -6,7 +6,6 @@ module Algorithm.Sidewinder (generateMaze) where
 import Control.Monad.RWS (MonadState (get), gets, modify')
 import Control.Monad.Random as Random (fromList)
 import Data.Foldable (traverse_)
-import Data.Map.Strict as Map (keys)
 import Data.Maybe (maybeToList)
 import MazeShape (
     EdgeState (Closed, Open),
@@ -37,7 +36,7 @@ getChoices ::
     Maze coord a -> coord -> [((coord, coord), Rational)]
 getChoices maze c = eastProb ++ northProb
   where
-    (n, e) = getNorthEastNeighbors c
+    (n, e) = getNorthEastNeighbors maze c
     eastProb = maybeToList $ (,0.5) . (c,) <$> e
     northCells = case n of
         Nothing -> linkedCells maze c
@@ -45,7 +44,7 @@ getChoices maze c = eastProb ++ northProb
     northProb = map (,0.5 / fromIntegral (length northCells)) northCells
 
 generate ::
-    (GridShape coord, NorthEastDirection (Direction coord), Ord coord) => coord -> MazeBuilder (Maze coord a) ()
+    (GridShape coord, NorthEastDirection (Direction coord), Ord coord, Show coord) => coord -> MazeBuilder (Maze coord a) ()
 generate c = do
     maze <- get
     let
@@ -56,7 +55,8 @@ generate c = do
             choice <- Random.fromList choices
             modify' $ uncurry connectEdge choice
 
-generateMaze :: (GridShape coord, NorthEastDirection (Direction coord), Ord coord) => MazeBuilder (Maze coord a) ()
+generateMaze ::
+    (GridShape coord, NorthEastDirection (Direction coord), Ord coord, Show coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
     ks <- gets allCoords
     traverse_ generate ks

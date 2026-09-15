@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -6,8 +7,23 @@ module MazeShape.Square where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Diagrams.Prelude hiding (Direction, Path, center, index, value)
-import MazeShape
+import Diagrams.Prelude (
+    Additive ((^+^)),
+    Coordinates ((^&)),
+    Located,
+    Point,
+    Trail,
+    V2,
+    fromVertices,
+ )
+import GridKind (GridKind (makeGrid))
+import MazeShape (
+    EdgeState (Closed),
+    GridShape (..),
+    Maze (Maze),
+    NodeShape (NodeShape),
+    NorthEastDirection (..),
+ )
 
 newtype Square = Square (Int, Int)
     deriving (Show, Eq, Ord)
@@ -27,11 +43,9 @@ instance GridShape Square where
       where
         point = fromIntegral x ^& fromIntegral (-y)
 
-squareLength :: (Num a) => a
+squareLength, center, minS, maxS :: Double
 squareLength = 1
-
 center = 0
-
 minS = center - 0.5 * squareLength
 maxS = center + 0.5 * squareLength
 
@@ -44,8 +58,8 @@ squareEdges c =
                 (fromVertices . (map (\p -> c ^+^ p)))
                 [ [(minS ^& maxS), (maxS ^& maxS)]
                 , [(minS ^& minS), (maxS ^& minS)]
-                , [(minS ^& minS), (minS ^& maxS)]
                 , [(maxS ^& minS), (maxS ^& maxS)]
+                , [(minS ^& minS), (minS ^& maxS)]
                 ]
             )
 
@@ -76,3 +90,13 @@ newSquareGrid s =
 -- | returns true if the given coordinate is within the shape size.
 inbounds :: Int -> Square -> Bool
 inbounds size (Square (x, y)) = x >= 0 && y >= 0 && x < size && y < size
+
+instance NorthEastDirection (Direction Square) where
+    northDir :: Direction Square
+    northDir = North
+    eastDir :: Direction Square
+    eastDir = East
+
+instance GridKind Square where
+    makeGrid :: Int -> Maze Square ()
+    makeGrid = newSquareGrid

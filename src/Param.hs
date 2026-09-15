@@ -66,7 +66,8 @@ config =
 --     )
 
 algorithmFun ::
-    (GridShape coord, NorthEastDirection (Direction coord), Ord coord) => Algorithm -> MazeBuilder (Maze coord a) ()
+    (GridShape coord, NorthEastDirection (Direction coord), Ord coord, Show coord) =>
+    Algorithm -> MazeBuilder (Maze coord a) ()
 algorithmFun BinaryTree = BinaryTree.generateMaze
 algorithmFun Sidewinder = Sidewinder.generateMaze
 algorithmFun AldousBroder = AldousBroder.generateMaze

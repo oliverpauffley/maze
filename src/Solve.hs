@@ -3,18 +3,22 @@
 
 module Solve where
 
-import Control.Lens (view, (&), (?~), (^.))
-import Control.Monad (guard)
-import Control.Monad.RWS (MonadState (get, put), gets, modify')
-import Control.Monad.Random (MonadRandom, uniform)
-import Data.Foldable (Foldable (foldMap'), maximumBy, minimumBy, traverse_)
+import Control.Lens ((&), (.~), (^.))
+import Control.Monad.Random (MonadRandom)
+import Data.Foldable (Foldable (foldMap'), maximumBy)
 import Data.Function (on)
-import Data.Functor.Rep (Representable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust, mapMaybe)
-import Data.Traversable (for)
-import MazeShape
+import Data.Maybe (mapMaybe)
+import MazeShape (
+    GridShape,
+    Maze (Maze),
+    getNodeValue,
+    getOpenEdges,
+    mazeEdges,
+    mazeNodes,
+    randomNode,
+ )
 
 -- | a node position with it's distance from a starting postion.
 type NodeDistance coord = (coord, Int)
@@ -22,8 +26,10 @@ type NodeDistance coord = (coord, Int)
 {- | walk through the maze and assign the distance walked as the value of the node we reach.
 for each step increase the distance until we have walked all nodes in the maze
 -}
-distance :: (GridShape coord, Ord coord) => Int -> Maze coord () -> coord -> Map coord Int
-distance d maze coord = go d maze coord mempty
+distance :: (GridShape coord, Ord coord) => Int -> Maze coord () -> coord -> Maze coord Int
+distance d maze coord =
+    let newNodes = (go d maze coord mempty)
+     in maze & mazeNodes .~ newNodes
   where
     go dis m c values =
         case Map.lookup c values of
@@ -33,8 +39,8 @@ distance d maze coord = go d maze coord mempty
                 let nextNodes = getOpenEdges c m
                  in Map.insert c dis values <> foldMap' (\n -> go (dis + 1) m n values) nextNodes
 
-solveNode :: (Show coord, GridShape coord, Ord coord) => coord -> Maze coord Int -> [coord]
-solveNode coord maze =
+solveNodes :: (Show coord, GridShape coord, Ord coord) => coord -> Maze coord Int -> [coord]
+solveNodes coord maze =
     let val = getNodeValue coord maze
         connections = getOpenEdges coord maze
      in case val of
@@ -42,7 +48,7 @@ solveNode coord maze =
             Just v ->
                 case findLowestPath v connections maze of
                     Nothing -> []
-                    Just next -> next : solveNode next maze
+                    Just next -> next : solveNodes next maze
 
 findLowestPath :: (Ord coord) => Int -> [coord] -> Maze coord Int -> Maybe coord
 findLowestPath val connections m = do
@@ -51,41 +57,28 @@ findLowestPath val connections m = do
         [] -> Nothing
         xs -> (Just . fst . minimum) xs
 
-solve :: (MonadRandom m, Show coord, GridShape coord, Ord coord) => Maze coord () -> m [coord]
-solve maze = do
-    start <- randomNode maze
-    let walkedMaze = distance 0 maze start
-        mx = maxElement walkedMaze
-        maze' = Maze walkedMaze (maze ^. mazeEdges)
-    return $ solveNode mx maze'
-
--- solve :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
--- solve = do
---     m <- get
---     solveNode $ fst $ Map.findMax m
-
--- -- find the longestPath in the maze
--- solveLongest :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
--- solveLongest = do
---     m <- get
---     solveNode $ maxElement m
+solve :: (Show coord, GridShape coord, Ord coord) => Maze coord Int -> [coord]
+solve maze =
+    let
+        nodes = maze ^. mazeNodes
+        mx = maxElement nodes
+        maze' = Maze nodes (maze ^. mazeEdges)
+     in
+        solveNodes mx maze'
 
 maxElement :: Map coord Int -> coord
 maxElement m = fst $ maximumBy (compare `on` snd) (Map.assocs m)
 
--- -- | Finds a longest route through a maze by applying Djkstra's algorithm twice
--- findLongestRoute :: (Representable d, Bounded (Rep d), Enum (Rep d)) => MazeBuilder (Maze d) [NodeID]
--- findLongestRoute = do
---     blankMaze <- get -- get the un-solved maze
-
---     -- solve once
---     start <- randomNode
---     distance 0 (start ^. nid)
-
---     -- plot the distances from the highestElement
-
---     newStart <- gets maxElement
-
---     -- reset and solve again
---     put blankMaze
---     distance 0 newStart >> solveLongest
+-- | Finds a longest route through a maze by applying Djkstra's algorithm twice
+findLongestRoute :: (MonadRandom m, Show b, GridShape b, Ord b) => Maze b () -> m [b]
+findLongestRoute blankMaze = do
+    -- start anywhere
+    start <- randomNode blankMaze
+    -- walk the maze to figure out the highest element in maze
+    let walkedMaze = distance 0 blankMaze (start)
+        -- find the point furthest from the random start
+        newStart = maxElement $ walkedMaze ^. mazeNodes
+        -- rewalk from this point furthest from the start
+        walkedMaze' = distance 0 blankMaze (newStart)
+    -- solve returns the point furthest from this point
+    return $ solve walkedMaze'
