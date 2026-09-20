@@ -3,30 +3,29 @@
 module Draw (mazeToDiagram)
 where
 
+import Control.Lens ((^.))
+import Control.Lens hiding ((#))
 import Data.Map (foldrWithKey)
 import qualified Data.Map as Map
 import Diagrams.Backend.SVG (B)
-import Diagrams.Prelude (
-    Diagram,
-    moveTo,
-    scale,
-    strokeLocTrail,
-    text,
-    (#),
- )
+import Diagrams.Prelude
 import MazeShape (
     EdgeState (Closed, Open),
     GridShape (neighbor, toShape),
     Maze (Maze),
     NodeShape (NodeShape),
+    center,
     edgeKey,
  )
 
 type Solution coord = [coord]
 type DeadEnds coord = [coord]
 
-mazeToDiagram :: (Show coord, GridShape coord, Ord coord) => Maze coord () -> Diagram B
-mazeToDiagram (Maze nodes edges) = foldMap drawNode (Map.keys nodes)
+mazeToDiagram :: (Show coord, GridShape coord, Ord coord) => Maze coord () -> Solution coord -> Diagram B
+mazeToDiagram (Maze nodes edges) solution =
+    let maze = foldMap drawNode (Map.keys nodes)
+        solutionLine = solutionToTrail solution
+     in solutionLine `atop` maze
   where
     drawNode n =
         let (NodeShape center edgeLines) = toShape n
@@ -42,6 +41,17 @@ mazeToDiagram (Maze nodes edges) = foldMap drawNode (Map.keys nodes)
     isOpen n dir = case neighbor n dir of
         Just n' | Map.member n' nodes && Map.lookup (edgeKey n n') edges == Just Open -> Open
         _otherwise -> Closed
+
+solutionToTrail :: (Show coord, GridShape coord, Ord coord) => Solution coord -> Diagram B
+solutionToTrail solution =
+    let centers = map (\s -> (toShape s) ^. MazeShape.center) solution
+     in ( strokeLocTrail
+            (fromVertices centers)
+        )
+            # lc red
+            # lw 0.5
+            # lineCap LineCapRound
+            # lineJoin LineJoinRound
 
 -- to test ghci> :main -o test.svg -w 400
 -- main :: IO ()

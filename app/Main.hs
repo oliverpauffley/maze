@@ -40,5 +40,5 @@ run cfg@Config{..} = do
             -- TODO wire up solutions and dead ends
             solution <- Solve.findLongestRoute maze
             let deadEnds = getDeadEnds maze
-                diagram = mazeToDiagram maze
+                diagram = mazeToDiagram maze solution
             renderSVG fileName (mkWidth diagramSize) diagram

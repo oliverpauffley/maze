@@ -37,7 +37,9 @@ distance d maze coord =
             Just _ -> values
             Nothing ->
                 let nextNodes = getOpenEdges c m
-                 in Map.insert c dis values <> foldMap' (\n -> go (dis + 1) m n values) nextNodes
+                    values' = Map.insert c dis values
+                 in -- TODO I think this is wrong since we could step on the same node twice in differnt paths
+                    foldMap' (\n -> go (dis + 1) m n values') nextNodes
 
 solveNodes :: (Show coord, GridShape coord, Ord coord) => coord -> Maze coord Int -> [coord]
 solveNodes coord maze =

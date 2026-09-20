@@ -7,6 +7,7 @@
 
 module MazeShape (
     GridShape (..),
+    nodeNeighbours,
     Maze (..),
     MazeBuilder,
     runBuilder,
@@ -31,6 +32,7 @@ module MazeShape (
     Algorithm (..),
     Shape (..),
     getNodeValue,
+    center,
 )
 where
 
@@ -202,6 +204,9 @@ connectEdge u v maze =
 
 getEdges :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [(coord, EdgeState)]
 getEdges c maze = getEdges' c maze (const True)
+
+nodeNeighbours :: (Ord coord, GridShape coord) => coord -> Maze coord a -> [coord]
+nodeNeighbours c maze = map fst $ getEdges c maze
 
 getEdges' ::
     (Ord coord, GridShape coord) => coord -> Maze coord a -> (EdgeState -> Bool) -> [(coord, EdgeState)]

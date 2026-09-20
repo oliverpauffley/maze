@@ -23,6 +23,7 @@ import MazeShape (
 -- | a path of connections that we want to make.
 type Path coord = [(coord, coord)]
 
+-- TODO something going wrong here I think!
 generateMaze :: (GridShape coord, Ord coord, Show coord) => MazeBuilder (Maze coord a) ()
 generateMaze = do
     m <- get
@@ -53,7 +54,7 @@ connectPath ::
     MazeBuilder (Maze coord a) ()
 connectPath unvisited path = do
     connectAll path
-    let unvisited' = deleteAll unvisited (map fst path)
+    let unvisited' = unvisited `Set.difference` (pathToSet path)
     if null unvisited'
         then pure ()
         else newStart unvisited'
@@ -67,7 +68,7 @@ newStart unvisited = do
     nextCoord <- uniform unvisited
     nextCoord' <- uniform $ getClosedEdges nextCoord m
     let nextPath = [(nextCoord, nextCoord')]
-    generate unvisited nextPath nextCoord'
+    generate unvisited nextPath nextCoord
 
 deleteRandom :: (Ord a) => Set.Set a -> IO (Set.Set a)
 deleteRandom ss = do
@@ -77,9 +78,6 @@ deleteRandom ss = do
 connectAll ::
     (GridShape coord, Ord coord, Show coord) => Path coord -> MazeBuilder (Maze coord a) ()
 connectAll = traverse_ (\(a, b) -> modify' (connectEdge a b))
-
-deleteAll :: (Ord a) => Set.Set a -> [a] -> Set.Set a
-deleteAll = foldr Set.delete
 
 -- | check the current path for a loop, if it exists remove it
 
@@ -92,3 +90,8 @@ updatePath :: (Eq a) => [(a, a)] -> (a, a) -> [(a, a)]
 updatePath xs n@(next, _) = ys ++ [n]
   where
     (ys, _) = break ((== next) . fst) xs
+
+pathToSet :: (Ord a) => [(a, a)] -> Set.Set a
+pathToSet xs = foldr (\(a, b) s -> insertBoth a b s) mempty xs
+  where
+    insertBoth a b s = Set.insert b (Set.insert a s)

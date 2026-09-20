@@ -22,6 +22,7 @@ import MazeShape (
     NodeShape (NodeShape),
     NorthEastDirection (..),
     edgeKey,
+    nodeNeighbours,
  )
 
 lineS :: Double
